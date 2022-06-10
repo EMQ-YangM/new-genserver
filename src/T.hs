@@ -13,36 +13,47 @@
 module T where
 
 import Control.Concurrent
+import Data.Kind
 
-data Call req resp where
-  Call :: req -> MVar resp -> Call req resp
+data Call (l :: Type -> Type) req resp where
+  Call :: req -> MVar resp -> Call l req resp
 
-data Cast msg where
-  Cast :: msg -> Cast msg
+data Cast (l :: Type -> Type) msg where
+  Cast :: msg -> Cast l msg
+
+instance Show req => Show (Call l req resp) where
+  show (Call req _) = "Call " ++ show req
+
+instance Show msg => Show (Cast l msg) where
+  show (Cast msg) = "Cast " ++ show msg
 
 type family GI a where
-  GI (Call req resp) = req
-  GI (Cast msg) = msg
+  GI (Call l req resp) = req
+  GI (Cast l msg) = msg
 
-type family RI a s where
-  RI (Call req resp) s = MVar resp -> s
-  RI (Cast msg) s = s
+type family RI a where
+  RI (Call l req resp) = MVar resp -> Call l req resp
+  RI (Cast l msg) = Cast l msg
 
 type family J v where
   J (v :: f n) = n
 
 class T f n where
-  t :: f n -> GI n -> RI n n
+  t :: f n -> GI n -> RI n
 
-instance T f (Call req resp) where
+instance T f (Call l req resp) where
   t _ = Call
 
-instance T f (Cast msg) where
+instance T f (Cast l msg) where
   t _ = Cast
 
 data l :+: r
   = L l
   | R r
+
+instance (Show l, Show r) => Show (l :+: r) where
+  show (L l) = "L (" ++ show l ++ ")"
+  show (R r) = "R (" ++ show r ++ ")"
 
 infixr 4 :+:
 
@@ -59,13 +70,16 @@ instance {-# OVERLAPPABLE #-} (Inject a b) => Inject a (a' :+: b) where
   inject = R . (inject @a @b)
 
 data Auth n where
-  Auth :: Auth (Call String Int)
+  Auth :: Auth (Call Auth String Bool)
 
 data PutInt n where
-  PutInt :: PutInt (Cast Int)
+  PutInt :: PutInt (Cast PutInt Int)
 
 data PutBool n where
-  PutBool :: PutBool (Cast Bool)
+  PutBool :: PutBool (Cast PutBool Bool)
+
+data PutBool1 n where
+  PutBool1 :: PutBool1 (Cast PutBool1 Bool)
 
 t0 = t Auth "hello"
 
@@ -75,14 +89,16 @@ t2 = t PutBool True
 
 -- >>> :kind! I
 -- I :: *
--- = Call [Char] Int :+: (Cast Int :+: Cast Bool)
+-- = Call Auth [Char] Bool
+--   :+: (Cast PutInt Int
+--        :+: (Cast PutBool Bool :+: Cast PutBool1 Bool))
 
-type I = J 'Auth :+: J 'PutInt :+: J 'PutBool
+type I = J 'Auth :+: J 'PutInt :+: J 'PutBool :+: J 'PutBool1
 
+-- >>> show val
+-- "[R (R (L (Cast False))),R (R (R (Cast False)))]"
 val :: [I]
 val =
-  [ inject t2,
-    inject t1,
-    inject (t0 undefined),
-    inject $ t PutInt 30
+  [ inject $ t PutBool False,
+    inject $ t PutBool1 False
   ]
