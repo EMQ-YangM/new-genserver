@@ -15,43 +15,44 @@ module T where
 
 import Control.Concurrent
 import Control.Monad (forever, void)
-import Data.Kind
 import Data.Time
 
-data Call (l :: Type -> Type) req resp where
-  Call :: req -> MVar resp -> Call l req resp
+data Call req resp where
+  Call :: req -> MVar resp -> Call req resp
 
-data Cast (l :: Type -> Type) msg where
-  Cast :: msg -> Cast l msg
+data Cast msg where
+  Cast :: msg -> Cast msg
 
-instance Show req => Show (Call l req resp) where
+instance Show req => Show (Call req resp) where
   show (Call req _) = "Call " ++ show req
 
-instance Show msg => Show (Cast l msg) where
+instance Show msg => Show (Cast msg) where
   show (Cast msg) = "Cast " ++ show msg
 
 type family GI a where
-  GI (Call l req resp) = req
-  GI (Cast l msg) = msg
+  GI (Call req resp) = req
+  GI (Cast msg) = msg
 
 type family RI a where
-  RI (Call l req resp) = IO (Call l req resp)
-  RI (Cast l msg) = IO (Cast l msg)
+  RI (Call req resp) = Call req resp
+  RI (Cast msg) = Cast msg
 
 type family Res a where
-  Res (Call l req resp) = resp
+  Res (_, Call req resp) = resp
 
 type family J v where
-  J (v :: f n) = n
+  J (v :: f n) = (f n, n)
 
 class T f n where
-  t :: f n -> GI n -> RI n
+  t :: f n -> GI n -> IO (f n, RI n)
 
-instance T f (Call l req resp) where
-  t _ gi = Call gi <$> newEmptyMVar
+instance T f (Call req resp) where
+  t f gi = do
+    mvar <- newEmptyMVar
+    pure (f, Call gi mvar)
 
-instance T f (Cast l msg) where
-  t _ = pure . Cast
+instance T f (Cast msg) where
+  t f gi = pure (f, Cast gi)
 
 data l :+: r
   = L l
@@ -78,42 +79,43 @@ instance {-# OVERLAPPABLE #-} (Inject a b) => Inject a (a' :+: b) where
 class InjectCall a b where
   injectCall :: Chan b -> IO a -> IO (Res a)
 
-instance Inject (Call l req resp) b => InjectCall (Call l req resp) b where
+instance Inject (v, Call req resp) b => InjectCall (v, Call req resp) b where
   injectCall chan a = do
-    a'@(Call _ resp) <- a
+    a'@(_, Call _ resp) <- a
     writeChan chan (inject a')
     takeMVar resp
 
 class InjectCast a b where
   injectCast :: Chan b -> IO a -> IO ()
 
-instance Inject (Cast l msg) b => InjectCast (Cast l msg) b where
+instance Inject (v, Cast msg) b => InjectCast (v, Cast msg) b where
   injectCast chan a = do
     a' <- a
     writeChan chan (inject a')
 
-call :: (RI n ~ IO a, InjectCall a b, T f n) => Chan b -> f n -> GI n -> IO (Res a)
+call :: (InjectCall (f n, RI n) b, T f n) => Chan b -> f n -> GI n -> IO (Res (f n, RI n))
 call a b c = injectCall a (t b c)
 
-cast :: (RI n ~ IO a, InjectCast a b, T f n) => Chan b -> f n -> GI n -> IO ()
+cast :: (InjectCast (f n, RI n) b, T f n) => Chan b -> f n -> GI n -> IO ()
 cast a b c = injectCast a (t b c)
 
 -------------------------- example
 data Auth n where
-  Auth :: Auth (Call Auth String Bool)
+  Auth :: Auth (Call String Bool)
 
 data PutInt n where
-  PutInt :: PutInt (Cast PutInt Int)
+  PutInt :: PutInt (Cast Int)
 
 data PutBool n where
-  PutBool :: PutBool (Cast PutBool Bool)
+  PutBool :: PutBool (Cast Bool)
 
 data PutBool1 n where
-  PutBool1 :: PutBool1 (Cast PutBool1 Bool)
+  PutBool1 :: PutBool1 (Cast Bool)
 
 data GetTime n where
-  GetTime :: GetTime (Call GetTime () UTCTime)
+  GetTime :: GetTime (Call () UTCTime)
 
+-- >>> :kind! I
 type I = J 'Auth :+: J 'PutInt :+: J 'PutBool :+: J 'PutBool1 :+: J 'GetTime
 
 val :: Chan I -> IO ()
@@ -129,13 +131,13 @@ handleI :: Chan I -> IO ()
 handleI chan = forever $ do
   val <- readChan chan
   case val of
-    L (Call s resp) -> do
+    L (_, Call s resp) -> do
       putStrLn s
       putMVar resp True
-    R (L (Cast i)) -> print i
-    R (R (L (Cast i))) -> print i
-    R (R (R (L (Cast i)))) -> print i
-    R (R (R (R (Call _ resp)))) -> do
+    R (L (_, Cast i)) -> print i
+    R (R (L (_, Cast i))) -> print i
+    R (R (R (L (_, Cast i)))) -> print i
+    R (R (R (R (_, Call _ resp)))) -> do
       time <- getCurrentTime
       putMVar resp time
 
