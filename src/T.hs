@@ -1,5 +1,6 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -90,19 +91,15 @@ data PutBool n where
 data PutBool1 n where
   PutBool1 :: PutBool1 (Cast PutBool1 Bool)
 
-t0 = t Auth "hello"
-
-t1 = t PutInt 10
-
-t2 = t PutBool True
-
 type K = [Auth, PutInt, PutBool, PutBool1]
 
 type I = J 'Auth :+: J 'PutInt :+: J 'PutBool :+: J 'PutBool1
 
+fun :: (RI n ~ IO a, Inject a b, T f n) => Chan b -> f n -> GI n -> IO ()
+fun a b c = injectChan a (t b c)
+
 val :: Chan I -> IO ()
 val chan = do
-  injectChan chan (t PutBool True)
-  injectChan chan (t Auth "nice")
-  injectChan chan (t PutBool1 True)
-  injectChan chan (t PutBool1 False)
+  fun chan PutBool True
+  fun chan Auth "hello"
+  fun chan Auth "fuck"
