@@ -32,8 +32,8 @@ type family GI a where
   GI (Cast l msg) = msg
 
 type family RI a where
-  RI (Call l req resp) = MVar resp -> Call l req resp
-  RI (Cast l msg) = Cast l msg
+  RI (Call l req resp) = IO (Call l req resp)
+  RI (Cast l msg) = IO (Cast l msg)
 
 type family J v where
   J (v :: f n) = n
@@ -42,10 +42,10 @@ class T f n where
   t :: f n -> GI n -> RI n
 
 instance T f (Call l req resp) where
-  t _ = Call
+  t _ gi = Call gi <$> newEmptyMVar
 
 instance T f (Cast l msg) where
-  t _ = Cast
+  t _ = pure . Cast
 
 data l :+: r
   = L l
@@ -69,6 +69,15 @@ instance {-# OVERLAPPABLE #-} Inject a (a :+: b) where
 instance {-# OVERLAPPABLE #-} (Inject a b) => Inject a (a' :+: b) where
   inject = R . (inject @a @b)
 
+class InjectChan a b where
+  injectChan :: Chan b -> IO a -> IO ()
+
+instance Inject a b => InjectChan a b where
+  injectChan chan a = do
+    a' <- a
+    writeChan chan (inject a')
+
+-------------------------- example
 data Auth n where
   Auth :: Auth (Call Auth String Bool)
 
@@ -87,18 +96,13 @@ t1 = t PutInt 10
 
 t2 = t PutBool True
 
--- >>> :kind! I
--- I :: *
--- = Call Auth [Char] Bool
---   :+: (Cast PutInt Int
---        :+: (Cast PutBool Bool :+: Cast PutBool1 Bool))
+type K = [Auth, PutInt, PutBool, PutBool1]
 
 type I = J 'Auth :+: J 'PutInt :+: J 'PutBool :+: J 'PutBool1
 
--- >>> show val
--- "[R (R (L (Cast False))),R (R (R (Cast False)))]"
-val :: [I]
-val =
-  [ inject $ t PutBool False,
-    inject $ t PutBool1 False
-  ]
+val :: Chan I -> IO ()
+val chan = do
+  injectChan chan (t PutBool True)
+  injectChan chan (t Auth "nice")
+  injectChan chan (t PutBool1 True)
+  injectChan chan (t PutBool1 False)
