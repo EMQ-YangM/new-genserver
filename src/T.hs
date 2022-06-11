@@ -14,7 +14,9 @@
 module T where
 
 import Control.Concurrent
+import Control.Monad (forever, void)
 import Data.Kind
+import Data.Time
 
 data Call (l :: Type -> Type) req resp where
   Call :: req -> MVar resp -> Call l req resp
@@ -109,12 +111,36 @@ data PutBool n where
 data PutBool1 n where
   PutBool1 :: PutBool1 (Cast PutBool1 Bool)
 
-type K = [Auth, PutInt, PutBool, PutBool1]
+data GetTime n where
+  GetTime :: GetTime (Call GetTime () UTCTime)
 
-type I = J 'Auth :+: J 'PutInt :+: J 'PutBool :+: J 'PutBool1
+type I = J 'Auth :+: J 'PutInt :+: J 'PutBool :+: J 'PutBool1 :+: J 'GetTime
 
 val :: Chan I -> IO ()
-val chan = do
+val chan = forever $ do
   val <- call chan Auth "hello"
   cast chan PutBool True
   print val
+  time <- call chan GetTime ()
+  print time
+  threadDelay 1000009
+
+handleI :: Chan I -> IO ()
+handleI chan = forever $ do
+  val <- readChan chan
+  case val of
+    L (Call s resp) -> do
+      putStrLn s
+      putMVar resp True
+    R (L (Cast i)) -> print i
+    R (R (L (Cast i))) -> print i
+    R (R (R (L (Cast i)))) -> print i
+    R (R (R (R (Call _ resp)))) -> do
+      time <- getCurrentTime
+      putMVar resp time
+
+r :: IO ()
+r = do
+  chan <- newChan
+  forkIO $ void $ val chan
+  handleI chan
