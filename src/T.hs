@@ -36,6 +36,9 @@ type family RI a where
   RI (Call l req resp) = IO (Call l req resp)
   RI (Cast l msg) = IO (Cast l msg)
 
+type family Res a where
+  Res (Call l req resp) = resp
+
 type family J v where
   J (v :: f n) = n
 
@@ -70,13 +73,28 @@ instance {-# OVERLAPPABLE #-} Inject a (a :+: b) where
 instance {-# OVERLAPPABLE #-} (Inject a b) => Inject a (a' :+: b) where
   inject = R . (inject @a @b)
 
-class InjectChan a b where
-  injectChan :: Chan b -> IO a -> IO ()
+class InjectCall a b where
+  injectCall :: Chan b -> IO a -> IO (Res a)
 
-instance Inject a b => InjectChan a b where
-  injectChan chan a = do
+instance Inject (Call l req resp) b => InjectCall (Call l req resp) b where
+  injectCall chan a = do
+    a'@(Call _ resp) <- a
+    writeChan chan (inject a')
+    takeMVar resp
+
+class InjectCast a b where
+  injectCast :: Chan b -> IO a -> IO ()
+
+instance Inject (Cast l msg) b => InjectCast (Cast l msg) b where
+  injectCast chan a = do
     a' <- a
     writeChan chan (inject a')
+
+call :: (RI n ~ IO a, InjectCall a b, T f n) => Chan b -> f n -> GI n -> IO (Res a)
+call a b c = injectCall a (t b c)
+
+cast :: (RI n ~ IO a, InjectCast a b, T f n) => Chan b -> f n -> GI n -> IO ()
+cast a b c = injectCast a (t b c)
 
 -------------------------- example
 data Auth n where
@@ -95,11 +113,8 @@ type K = [Auth, PutInt, PutBool, PutBool1]
 
 type I = J 'Auth :+: J 'PutInt :+: J 'PutBool :+: J 'PutBool1
 
-fun :: (RI n ~ IO a, Inject a b, T f n) => Chan b -> f n -> GI n -> IO ()
-fun a b c = injectChan a (t b c)
-
 val :: Chan I -> IO ()
 val chan = do
-  fun chan PutBool True
-  fun chan Auth "hello"
-  fun chan Auth "fuck"
+  val <- call chan Auth "hello"
+  cast chan PutBool True
+  print val
