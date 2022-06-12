@@ -176,12 +176,17 @@ instance (MonadIO m, Algebra sig m) => Algebra (Request b ms A.:+: sig) (Request
         pure (val <$ ctx)
       A.R sign -> alg (runReader chan . unRequestC . hdl) sign ctx
 
-f1 :: HasServer "log" I '[Auth, PutVal, GetVal] sig m => m ()
+f1 ::
+  ( HasServer "log" I '[Auth, PutVal, GetVal] sig m,
+    HasServer "val" I '[Auth, PutVal, GetVal] sig m
+  ) =>
+  m ()
 f1 = do
-  v <- rCall @"log" Auth "nice"
+  v <- rCall @"val" Auth "nice"
   rCast @"log" PutVal (length $ show v)
+  v <- rCall @"log" Auth "nice"
   rGet @"log" GetVal
-  pure ()
+  rCast @"log" PutVal (length $ show v)
 
 --------------------------------------------
 
