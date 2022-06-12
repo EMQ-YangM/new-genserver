@@ -5,4 +5,4 @@ import T
 main :: IO ()
 main = do
   putStrLn "Hello, Haskell!"
-  r
+  -- r
