@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -78,42 +79,28 @@ call _ req = SCall @(Call req resp -> a) @req @resp req undefined
 ------------------------------------------------ example
 newtype Arg a = Arg (Call a Bool)
 
+newtype Arg1 a = Arg1 (Call a Bool)
+
 newtype A = A (Call Int Bool)
 
 newtype B = B (Cast Int)
 
 newtype C = C (Get Bool)
 
--- >>> :kind! Api Double String Char
--- Api Double String Char :: *
--- = SCall (Call Double Bool -> Arg Double) Double Bool
---   :+: (SCall (Call [Char] Bool -> Arg [Char]) [Char] Bool
---        :+: (SCall (Call Char Bool -> Arg Char) Char Bool
---             :+: (SCall (Call Int Bool -> A) Int Bool
---                  :+: (SCast (Cast Int -> B) Int :+: SGet (Get Bool -> C) Bool))))
-type Api a b c =
-  K ('Arg @a)
-    :+: K ('Arg @b)
-    :+: K ('Arg @c)
-    :+: K 'A
+type Api a b =
+  K 'A
     :+: K 'B
     :+: K 'C
+    :+: K ('Arg @a)
+    :+: K ('Arg1 @b)
 
--- >>> show is
--- "[L(SCall Req:True),R(L(SCall Req:\"nice\")),R(R(L(SCall Req:'a'))),R(R(R(L(SCall Req:1)))),R(R(R(R(L(SCast Msg:1))))),R(R(R(R(R(SGet)))))]"
-is :: [Api Bool String Char]
-is =
-  [ inject $ call Arg True,
-    inject $ call Arg "nice",
-    inject $ call Arg 'a',
-    inject $ call A 1,
+-- >>> show (is 10 30)
+-- "[L(SCall Req:1),R(L(SCast Msg:1)),R(R(L(SGet))),R(R(R(L(SCall Req:10)))),R(R(R(R(SCall Req:30))))]"
+is :: a -> b -> [Api a b]
+is a b =
+  [ inject $ call A 1,
     inject $ cast B 1,
-    inject $ get C
+    inject $ get C,
+    inject $ call Arg a,
+    inject $ call Arg1 b
   ]
-
--- L(SCall Req:True)
--- R(L(SCall Req:"nice"))
--- R(R(L(SCall Req:'a')))
--- R(R(R(L(SCall Req:1))))
--- R(R(R(R(L(SCast Msg:1)))))
--- R(R(R(R(R(SGet)))))
