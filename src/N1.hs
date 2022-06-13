@@ -100,14 +100,20 @@ type Api a b c =
     :+: K 'C
 
 -- >>> show is
--- "[R(R(R(R(R(SGet))))),L(SCall Req:True),R(L(SCall Req:\"nice\")),R(R(L(SCall Req:'a'))),R(R(R(L(SCall Req:1)))),R(R(R(L(SCall Req:10010)))),R(R(R(R(L(SCast Msg:1)))))]"
+-- "[L(SCall Req:True),R(L(SCall Req:\"nice\")),R(R(L(SCall Req:'a'))),R(R(R(L(SCall Req:1)))),R(R(R(R(L(SCast Msg:1))))),R(R(R(R(R(SGet)))))]"
 is :: [Api Bool String Char]
 is =
-  [ inject $ get C,
-    inject $ call Arg True,
+  [ inject $ call Arg True,
     inject $ call Arg "nice",
     inject $ call Arg 'a',
     inject $ call A 1,
-    inject $ call A 10010,
-    inject $ cast B 1
+    inject $ cast B 1,
+    inject $ get C
   ]
+
+-- L(SCall Req:True)
+-- R(L(SCall Req:"nice"))
+-- R(R(L(SCall Req:'a')))
+-- R(R(R(L(SCall Req:1))))
+-- R(R(R(R(L(SCast Msg:1)))))
+-- R(R(R(R(R(SGet)))))
