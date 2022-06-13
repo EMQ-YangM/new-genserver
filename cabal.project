@@ -1,0 +1,10 @@
+packages: .
+
+source-repository-package
+  type: git
+  location: https://github.com/input-output-hk/io-sim.git
+  tag: 57e888b1894829056cb00b7b5785fdf6a74c3271
+  subdir:
+    io-classes
+    io-sim
+    strict-stm
