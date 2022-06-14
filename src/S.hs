@@ -6,7 +6,6 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module S where
 
@@ -17,16 +16,17 @@ import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Codec.Serialise
 import Codec.Serialise.Encoding
-import Control.Monad (replicateM)
 import Control.Monad.Class.MonadST
 import Control.Monad.Class.MonadSTM
+import Control.Monad.IOSim
 import Control.Monad.ST
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Internal as LBS (smallChunkSize)
-import Test.QuickCheck (Arbitrary (arbitrary), Gen, generate)
+import Data.Maybe (isNothing)
+import Test.QuickCheck (Arbitrary (arbitrary), quickCheck)
 
 data Channel m a = Channel
   { send :: a -> m (),
@@ -126,7 +126,7 @@ convertCborDecoder cborDecode =
 
 -------------------------------------------------------------- example
 
-data VA = VA Int Bool Char deriving (Show)
+data VA = VA Int Bool Char deriving (Show, Eq)
 
 instance Arbitrary VA where
   arbitrary = VA <$> arbitrary <*> arbitrary <*> arbitrary
@@ -143,12 +143,20 @@ decodeVA = do
     (4, 0) -> VA <$> decode <*> decode <*> decode
     _ -> fail "failed to decode VA"
 
--- >>> vt3
--- [Right (VA 19 False '\'',Nothing),Right (VA 28 False 'F',Nothing),Right (VA (-2) False '@',Nothing)]
-vt3 :: IO [Either DeserialiseFailure (VA, Maybe LBS.ByteString)]
-vt3 = replicateM 3 $ do
+vt3 ::
+  ( MonadSTM m,
+    MonadST m
+  ) =>
+  VA ->
+  m (Either DeserialiseFailure (VA, Maybe LBS.ByteString))
+vt3 gva = do
   (Channel {send}, b) <- createConnectedChannels
-  gva <- generate (arbitrary :: Gen VA)
   send (convertCborEncoder encodeVA gva)
   vt2' <- convertCborDecoder decodeVA
   runDecoderWithChannel b Nothing vt2'
+
+rvt3 gva = case runSim $ vt3 gva of
+  Right (Right (cva, jv)) -> cva == gva && isNothing jv
+  _ -> False
+
+q1 = quickCheck rvt3
