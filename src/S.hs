@@ -1,17 +1,24 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 -- copy from: https://github.com/input-output-hk/typed-protocols
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module S where
 
 import Codec.CBOR.Decoding
 import qualified Codec.CBOR.Decoding as CBOR (Decoder)
 import qualified Codec.CBOR.Encoding as CBOR (Encoding)
+import Codec.CBOR.Pretty
+import Codec.CBOR.Read (deserialiseFromBytes)
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
 import Codec.Serialise
@@ -26,7 +33,8 @@ import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Internal as LBS (smallChunkSize)
 import Data.Maybe (isNothing)
-import Test.QuickCheck (Arbitrary (arbitrary), quickCheck)
+import N1
+import Test.QuickCheck (Arbitrary (arbitrary), Gen, frequency, generate, quickCheck)
 
 data Channel m a = Channel
   { send :: a -> m (),
@@ -126,14 +134,27 @@ convertCborDecoder cborDecode =
 
 -------------------------------------------------------------- example
 
-data VA = VA Int Bool Char deriving (Show, Eq)
+data VA
+  = VA Int Bool Char
+  | VB String
+  deriving (Show, Eq)
 
 instance Arbitrary VA where
-  arbitrary = VA <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary =
+    frequency
+      [ (1, VA <$> arbitrary <*> arbitrary <*> arbitrary),
+        (1, VB <$> arbitrary)
+      ]
+
+instance Serialise VA where
+  encode = encodeVA
+  decode = decodeVA
 
 encodeVA :: VA -> Encoding
 encodeVA (VA i b s) =
   encodeListLen 4 <> encodeWord 0 <> encode i <> encode b <> encode s
+encodeVA (VB s) =
+  encodeListLen 2 <> encodeWord 1 <> encode s
 
 decodeVA :: Decoder s VA
 decodeVA = do
@@ -141,6 +162,7 @@ decodeVA = do
   tag <- decodeWord
   case (len, tag) of
     (4, 0) -> VA <$> decode <*> decode <*> decode
+    (2, 1) -> VB <$> decode
     _ -> fail "failed to decode VA"
 
 vt3 ::
@@ -155,8 +177,111 @@ vt3 gva = do
   vt2' <- convertCborDecoder decodeVA
   runDecoderWithChannel b Nothing vt2'
 
+-- >>> ttt
+-- Right (VB "B]hJx\1067627\ACKi*]|\a\1005367\49576",Nothing)
+ttt = do
+  val <- generate (arbitrary :: Gen VA)
+  pure $ runSimOrThrow (vt3 val)
+
 rvt3 gva = case runSim $ vt3 gva of
   Right (Right (cva, jv)) -> cva == gva && isNothing jv
   _ -> False
 
 q1 = quickCheck rvt3
+
+----------------------------
+class SR v where
+  srSend :: Monad m => v -> Channel m LBS.ByteString -> m ()
+  srRec :: Monad m => Channel m LBS.ByteString -> m v
+
+instance (Serialise msg, Serialise msg1) => SR (SCast a msg :+: SCast a1 msg1) where
+  srSend (L (SCast msg)) Channel {send} = do
+    let emsg = CBOR.toLazyByteString $ encode (0 :: Word, msg)
+    send emsg
+  srSend (R (SCast msg)) Channel {send} = do
+    let emsg = CBOR.toLazyByteString $ encode (1 :: Word, msg)
+    send emsg
+
+  srRec channel = undefined
+
+-- srRec channel = do
+--   vt <- convertCborDecoder decode
+--   val <- runDecoderWithChannel channel Nothing vt
+--   case val of
+--     Left e -> undefined
+--     Right (a :: msg, _) -> pure (L $ SCast a)
+
+----------------------------
+instance
+  {-# OVERLAPPABLE #-}
+  ( Serialise l,
+    Serialise r
+  ) =>
+  Serialise (l :+: r)
+  where
+  encode x = case x of
+    L l -> encodeWord 0 <> encode l
+    R r -> encodeWord 1 <> encode r
+
+  decode = do
+    tag <- decodeWord
+    case tag of
+      0 -> L <$> decode
+      1 -> R <$> decode
+      _ -> fail "decode :+: failed"
+
+instance
+  {-# OVERLAPPABLE #-}
+  ( Serialise a,
+    Serialise b,
+    Serialise c
+  ) =>
+  Serialise (a :+: b :+: c)
+  where
+  encode x = case x of
+    L l -> encodeWord 0 <> encode l
+    R (L r) -> encodeWord 1 <> encode r
+    R (R c) -> encodeWord 2 <> encode c
+
+  decode = do
+    tag <- decodeWord
+    case tag of
+      0 -> L <$> decode
+      1 -> R . L <$> decode
+      2 -> R . R <$> decode
+      _ -> fail "decode :+: failed"
+
+instance
+  {-# OVERLAPPABLE #-}
+  ( Serialise a,
+    Serialise b,
+    Serialise c,
+    Serialise d
+  ) =>
+  Serialise (a :+: b :+: c :+: d)
+  where
+  encode x = case x of
+    L l -> encodeWord 0 <> encode l
+    R (L r) -> encodeWord 1 <> encode r
+    R (R (L c)) -> encodeWord 2 <> encode c
+    R (R (R d)) -> encodeWord 3 <> encode d
+
+  decode = do
+    tag <- decodeWord
+    case tag of
+      0 -> L <$> decode
+      1 -> R . L <$> decode
+      2 -> R . R . L <$> decode
+      3 -> R . R . R <$> decode
+      _ -> fail "decode :+: failed"
+
+type V = Int :+: Bool :+: VA :+: Int
+
+-- >>> k
+-- Right ("",R(R(L(VA 13 True '\1087217'))))
+k :: IO (Either DeserialiseFailure (LBS.ByteString, V))
+k = do
+  val <- generate (arbitrary :: Gen VA)
+  pure $
+    deserialiseFromBytes @V decode $
+      CBOR.toLazyByteString $ encode @V (R (R (L val))) -- (R (R (L 'a')))
