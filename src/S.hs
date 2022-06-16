@@ -2,13 +2,16 @@
 -- copy from: https://github.com/input-output-hk/typed-protocols
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -36,6 +39,30 @@ import Data.Maybe (isNothing)
 import N1
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, frequency, generate, quickCheck)
 
+------------------------------------------------
+data l :+: r
+  = L l
+  | R r
+
+instance (Show l, Show r) => Show (l :+: r) where
+  show (L l) = "L(" ++ show l ++ ")"
+  show (R r) = "R(" ++ show r ++ ")"
+
+infixr 4 :+:
+
+class Inject a b where
+  inject :: a -> b
+
+instance Inject a a where
+  inject = id
+
+instance {-# OVERLAPPABLE #-} Inject a (a :+: b) where
+  inject = L
+
+instance {-# OVERLAPPABLE #-} (Inject a b) => Inject a (a' :+: b) where
+  inject = R . (inject @a @b)
+
+------------------------------------------------
 data Channel m a = Channel
   { send :: a -> m (),
     recv :: m (Maybe a)
@@ -189,12 +216,25 @@ rvt3 gva = case runSim $ vt3 gva of
 
 q1 = quickCheck rvt3
 
+-- SGet a resp
+--- handleGet
+-- SCast a msg
+-- SCall a req resp
+
+srSGet :: Channel m LBS.ByteString -> Word -> SGet resp -> m ()
+srSGet Channel {send, recv} w (SGet tmvar) = do
+  undefined
+
+rsSGet :: Channel m LBS.ByteString -> Word -> SGet resp -> m ()
+rsSGet Channel {send, recv} w (SGet tmvar) = do
+  undefined
+
 ----------------------------
 class SR v where
-  srSend :: Monad m => v -> Channel m LBS.ByteString -> m ()
-  srRec :: Monad m => Channel m LBS.ByteString -> m v
+  srSend :: v -> Channel m LBS.ByteString -> m ()
+  srRecv :: Channel m LBS.ByteString -> m v
 
-instance (Serialise msg, Serialise msg1) => SR (SCast a msg :+: SCast a1 msg1) where
+instance (Serialise msg, Serialise msg1) => SR (SCast msg :+: SCast msg1) where
   srSend (L (SCast msg)) Channel {send} = do
     let emsg = CBOR.toLazyByteString $ encode (0 :: Word, msg)
     send emsg
@@ -202,86 +242,79 @@ instance (Serialise msg, Serialise msg1) => SR (SCast a msg :+: SCast a1 msg1) w
     let emsg = CBOR.toLazyByteString $ encode (1 :: Word, msg)
     send emsg
 
-  srRec channel = undefined
-
--- srRec channel = do
---   vt <- convertCborDecoder decode
---   val <- runDecoderWithChannel channel Nothing vt
---   case val of
---     Left e -> undefined
---     Right (a :: msg, _) -> pure (L $ SCast a)
+  srRecv _ = undefined
 
 ----------------------------
-instance
-  {-# OVERLAPPABLE #-}
-  ( Serialise l,
-    Serialise r
-  ) =>
-  Serialise (l :+: r)
-  where
-  encode x = case x of
-    L l -> encodeWord 0 <> encode l
-    R r -> encodeWord 1 <> encode r
+-- instance
+--   {-# OVERLAPPABLE #-}
+--   ( Serialise l,
+--     Serialise r
+--   ) =>
+--   Serialise (l :+: r)
+--   where
+--   encode x = case x of
+--     L l -> encodeWord 0 <> encode l
+--     R r -> encodeWord 1 <> encode r
 
-  decode = do
-    tag <- decodeWord
-    case tag of
-      0 -> L <$> decode
-      1 -> R <$> decode
-      _ -> fail "decode :+: failed"
+--   decode = do
+--     tag <- decodeWord
+--     case tag of
+--       0 -> L <$> decode
+--       1 -> R <$> decode
+--       _ -> fail "decode :+: failed"
 
-instance
-  {-# OVERLAPPABLE #-}
-  ( Serialise a,
-    Serialise b,
-    Serialise c
-  ) =>
-  Serialise (a :+: b :+: c)
-  where
-  encode x = case x of
-    L l -> encodeWord 0 <> encode l
-    R (L r) -> encodeWord 1 <> encode r
-    R (R c) -> encodeWord 2 <> encode c
+-- instance
+--   {-# OVERLAPPABLE #-}
+--   ( Serialise a,
+--     Serialise b,
+--     Serialise c
+--   ) =>
+--   Serialise (a :+: b :+: c)
+--   where
+--   encode x = case x of
+--     L l -> encodeWord 0 <> encode l
+--     R (L r) -> encodeWord 1 <> encode r
+--     R (R c) -> encodeWord 2 <> encode c
 
-  decode = do
-    tag <- decodeWord
-    case tag of
-      0 -> L <$> decode
-      1 -> R . L <$> decode
-      2 -> R . R <$> decode
-      _ -> fail "decode :+: failed"
+--   decode = do
+--     tag <- decodeWord
+--     case tag of
+--       0 -> L <$> decode
+--       1 -> R . L <$> decode
+--       2 -> R . R <$> decode
+--       _ -> fail "decode :+: failed"
 
-instance
-  {-# OVERLAPPABLE #-}
-  ( Serialise a,
-    Serialise b,
-    Serialise c,
-    Serialise d
-  ) =>
-  Serialise (a :+: b :+: c :+: d)
-  where
-  encode x = case x of
-    L l -> encodeWord 0 <> encode l
-    R (L r) -> encodeWord 1 <> encode r
-    R (R (L c)) -> encodeWord 2 <> encode c
-    R (R (R d)) -> encodeWord 3 <> encode d
+-- instance
+--   {-# OVERLAPPABLE #-}
+--   ( Serialise a,
+--     Serialise b,
+--     Serialise c,
+--     Serialise d
+--   ) =>
+--   Serialise (a :+: b :+: c :+: d)
+--   where
+--   encode x = case x of
+--     L l -> encodeWord 0 <> encode l
+--     R (L r) -> encodeWord 1 <> encode r
+--     R (R (L c)) -> encodeWord 2 <> encode c
+--     R (R (R d)) -> encodeWord 3 <> encode d
 
-  decode = do
-    tag <- decodeWord
-    case tag of
-      0 -> L <$> decode
-      1 -> R . L <$> decode
-      2 -> R . R . L <$> decode
-      3 -> R . R . R <$> decode
-      _ -> fail "decode :+: failed"
+--   decode = do
+--     tag <- decodeWord
+--     case tag of
+--       0 -> L <$> decode
+--       1 -> R . L <$> decode
+--       2 -> R . R . L <$> decode
+--       3 -> R . R . R <$> decode
+--       _ -> fail "decode :+: failed"
 
-type V = Int :+: Bool :+: VA :+: Int
+-- type V = Int :+: Bool :+: VA :+: Int
 
--- >>> k
--- Right ("",R(R(L(VA 13 True '\1087217'))))
-k :: IO (Either DeserialiseFailure (LBS.ByteString, V))
-k = do
-  val <- generate (arbitrary :: Gen VA)
-  pure $
-    deserialiseFromBytes @V decode $
-      CBOR.toLazyByteString $ encode @V (R (R (L val))) -- (R (R (L 'a')))
+-- -- >>> k
+-- -- Right ("",R(R(L(VA 13 True '\1087217'))))
+-- k :: IO (Either DeserialiseFailure (LBS.ByteString, V))
+-- k = do
+--   val <- generate (arbitrary :: Gen VA)
+--   pure $
+--     deserialiseFromBytes @V decode $
+--       CBOR.toLazyByteString $ encode @V (R (R (L val))) -- (R (R (L 'a')))

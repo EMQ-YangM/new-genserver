@@ -44,37 +44,37 @@ data Cast msg
 
 data Call req resp
 
-newtype SGet a resp = SGet (MVar resp)
+newtype SGet resp = SGet (MVar resp)
 
-newtype SCast a msg = SCast msg
+newtype SCast msg = SCast msg
 
-data SCall a req resp = SCall req (MVar resp)
+data SCall req resp = SCall req (MVar resp)
 
-instance Show (SGet a resp) where
+instance Show (SGet resp) where
   show (SGet _) = "SGet"
 
-instance Show msg => Show (SCast a msg) where
+instance Show msg => Show (SCast msg) where
   show (SCast msg) = "SCast Msg:" ++ show msg
 
-instance Show req => Show (SCall a req resp) where
+instance Show req => Show (SCall req resp) where
   show (SCall req _) = "SCall Req:" ++ show req
 
 type family K a where
-  K (a :: f -> b) = K1 a f
+  K (_ :: f -> b) = K1 f
 
-type family K1 a b where
-  K1 (a :: f -> b) (Get resp) = SGet (f -> b) resp
-  K1 (a :: f -> b) (Cast msg) = SCast (f -> b) msg
-  K1 (a :: f -> b) (Call req resp) = SCall (f -> b) req resp
+type family K1 f where
+  K1 (Get resp) = SGet resp
+  K1 (Cast msg) = SCast msg
+  K1 (Call req resp) = SCall req resp
 
-get :: forall resp a. (Get resp -> a) -> SGet (Get resp -> a) resp
-get _ = SGet @(Get resp -> a) @resp undefined
+get :: forall resp a. (Get resp -> a) -> SGet resp
+get _ = SGet @resp undefined
 
-cast :: forall msg a. (Cast msg -> a) -> msg -> SCast (Cast msg -> a) msg
-cast _ = SCast @(Cast msg -> a) @msg
+cast :: forall msg a. (Cast msg -> a) -> msg -> SCast msg
+cast _ = SCast @msg
 
-call :: forall req resp a. (Call req resp -> a) -> req -> SCall (Call req resp -> a) req resp
-call _ req = SCall @(Call req resp -> a) @req @resp req undefined
+call :: forall req resp a. (Call req resp -> a) -> req -> SCall req resp
+call _ req = SCall @req @resp req undefined
 
 ------------------------------------------------ example
 newtype Arg a = Arg (Call a Bool)
@@ -86,6 +86,21 @@ newtype A = A (Call Int Bool)
 newtype B = B (Cast Int)
 
 newtype C = C (Get Bool)
+
+data SigV a b where
+  SigV1 :: SCall a b -> SigV a b
+
+-- >>> :kind! Api1 Int String
+-- Api1 Int String :: [*]
+-- = '[SCall Int Bool, SCast Int, SGet Bool, SCall Int Bool,
+--     SCall [Char] Bool]
+type Api1 a b =
+  [ K 'A,
+    K 'B,
+    K 'C,
+    K ('Arg @a),
+    K ('Arg1 @b)
+  ]
 
 type Api a b =
   K 'A
@@ -100,7 +115,7 @@ is :: a -> b -> [Api a b]
 is a b =
   [ inject $ call A 1,
     inject $ cast B 1,
-    inject $ get C,
-    inject $ call Arg a,
-    inject $ call Arg1 b
+    inject $ get C
+    -- inject $ call Arg a
+    -- inject $ call Arg1 b
   ]
