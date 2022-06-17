@@ -25,6 +25,7 @@ library
     exposed-modules: T
                    , N
                    , N1
+                   , N2
                    , S
 
     -- Modules included in this library but not exported.

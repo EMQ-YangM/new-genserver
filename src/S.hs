@@ -40,29 +40,6 @@ import N1
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, frequency, generate, quickCheck)
 
 ------------------------------------------------
-data l :+: r
-  = L l
-  | R r
-
-instance (Show l, Show r) => Show (l :+: r) where
-  show (L l) = "L(" ++ show l ++ ")"
-  show (R r) = "R(" ++ show r ++ ")"
-
-infixr 4 :+:
-
-class Inject a b where
-  inject :: a -> b
-
-instance Inject a a where
-  inject = id
-
-instance {-# OVERLAPPABLE #-} Inject a (a :+: b) where
-  inject = L
-
-instance {-# OVERLAPPABLE #-} (Inject a b) => Inject a (a' :+: b) where
-  inject = R . (inject @a @b)
-
-------------------------------------------------
 data Channel m a = Channel
   { send :: a -> m (),
     recv :: m (Maybe a)
