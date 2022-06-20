@@ -20,6 +20,7 @@ module T1 where
 import Data.Kind
 import GHC.Base
 import GHC.TypeLits
+import Test.QuickCheck
 import Unsafe.Coerce
 
 type Sum :: [Type] -> Type
@@ -67,6 +68,24 @@ class Apply (c :: * -> Constraint) (fs :: [*]) where
 -- K :: *
 -- = Sum '[Int, Bool, [Char], Float, Double, [Int]]
 type K = Sum [Int, Bool, String, Float, Double, [Int]]
+
+instance Arbitrary K where
+  arbitrary =
+    oneof
+      [ inject <$> (arbitrary :: Gen Int),
+        inject <$> (arbitrary :: Gen Bool),
+        inject <$> (arbitrary :: Gen String),
+        inject <$> (arbitrary :: Gen Float),
+        inject <$> (arbitrary :: Gen Double),
+        inject <$> (arbitrary :: Gen [Int])
+      ]
+
+-- >>> t1
+-- "[25,23,-5]"
+t1 :: IO String
+t1 = do
+  k <- generate (arbitrary :: Gen K)
+  pure $ apply @F f k
 
 -- >>> show val
 -- "[0,1,5,3,1,2,4]"
