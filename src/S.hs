@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 -- copy from: https://github.com/input-output-hk/typed-protocols
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -35,8 +36,11 @@ import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Internal as LBS (smallChunkSize)
+import Data.Data
+import Data.Kind
 import Data.Maybe (isNothing)
-import N1
+import GHC.TypeLits
+import N2
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, frequency, generate, quickCheck)
 
 ------------------------------------------------
@@ -198,28 +202,55 @@ q1 = quickCheck rvt3
 -- SCast a msg
 -- SCall a req resp
 
-srSGet :: Channel m LBS.ByteString -> Word -> SGet resp -> m ()
-srSGet Channel {send, recv} w (SGet tmvar) = do
-  undefined
-
-rsSGet :: Channel m LBS.ByteString -> Word -> SGet resp -> m ()
-rsSGet Channel {send, recv} w (SGet tmvar) = do
-  undefined
+-- >>> :kind! TI IO (IO :+: Maybe)
 
 ----------------------------
-class SR v where
-  srSend :: v -> Channel m LBS.ByteString -> m ()
-  srRecv :: Channel m LBS.ByteString -> m v
+class SR (b :: (Type -> Type) -> Type) (v :: (Type -> Type) -> Type) (n :: Type -> Type) where
+  vsend :: TVar n (Maybe LBS.ByteString) -> v n -> Channel n LBS.ByteString -> n ()
+  vrecv :: TVar n (Maybe LBS.ByteString) -> TQueue n (b n) -> Channel n LBS.ByteString -> n ()
 
-instance (Serialise msg, Serialise msg1) => SR (SCast msg :+: SCast msg1) where
-  srSend (L (SCast msg)) Channel {send} = do
-    let emsg = CBOR.toLazyByteString $ encode (0 :: Word, msg)
-    send emsg
-  srSend (R (SCast msg)) Channel {send} = do
-    let emsg = CBOR.toLazyByteString $ encode (1 :: Word, msg)
-    send emsg
+instance
+  ( MonadSTM n,
+    MonadST n,
+    Serialise resp,
+    KnownNat (TI (SGet a resp) b),
+    Inject (SGet a resp) b
+  ) =>
+  SR b (SGet a resp) n
+  where
+  vsend tvar (SGet tmvar) channel@Channel {send} = do
+    let index = fromIntegral $ natVal (Proxy :: Proxy (TI (SGet a resp) b))
+    send $ convertCborEncoder encodeInt index
+    mval <- readTVarIO tvar
+    vdec <- convertCborDecoder decode
+    val <- runDecoderWithChannel channel mval vdec
+    case val of
+      Left e -> error (show e)
+      Right (v, jl) -> do
+        atomically $ writeTVar tvar jl
+        atomically (putTMVar tmvar v)
 
-  srRecv _ = undefined
+  vrecv tvar tq channel@Channel {send} = do
+    tmvar <- newEmptyTMVarIO
+    let (sg :: SGet a resp n) = SGet tmvar
+    atomically $ writeTQueue tq (inject sg)
+    val' <- atomically $ takeTMVar tmvar
+    send $ convertCborEncoder encode val'
+    pure ()
+
+class Grecv b n where
+  grecv :: TVar n (Maybe LBS.ByteString) -> TQueue n (b n) -> Channel n LBS.ByteString -> n ()
+
+-- instance (MonadSTM n, MonadST n, MonadFail n) => Grecv (l :+: r) n where
+--   grecv tvar tq channel = do
+--     mval <- readTVarIO tvar
+--     vdec <- convertCborDecoder decodeInt
+--     Right (val, jl) <- runDecoderWithChannel channel mval vdec
+--     atomically $ writeTVar tvar jl
+--     case val of
+--       1 -> vrecv @(l :+: r) @l @n tvar tq channel
+--       2 -> undefined
+--       _ -> error "nice"
 
 ----------------------------
 -- instance

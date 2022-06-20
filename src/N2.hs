@@ -16,6 +16,7 @@ module N2 where
 
 import Control.Monad.Class.MonadSTM
 import Data.Kind
+import GHC.TypeLits
 
 ------------------------------------------------
 data (l :+: r) (n :: Type -> Type)
@@ -79,6 +80,10 @@ cast _ = SCast
 call :: forall n req resp a. (Call req resp -> a) -> req -> SCall a req resp n
 call _ req = SCall req undefined
 
+type family TI (a :: (Type -> Type) -> Type) b where
+  TI a (a :+: b) = 1
+  TI a (a' :+: b) = 1 + TI a b
+
 -- ------------------------------------------------ example
 
 newtype Arg a = Arg (Call a Bool)
@@ -91,12 +96,9 @@ newtype B = B (Cast Int)
 
 newtype C = C (Get Bool)
 
--- >>> :kind! Api Int Bool
--- Api Int Bool :: (* -> *) -> *
--- = SCall A Int Bool
---   :+: (SCast B Int
---        :+: (SGet C Bool
---             :+: (SCall (Arg Int) Int Bool :+: SCall (Arg1 Bool) Bool Bool)))
+-- >>> :kind! TI  (SGet C Int ) (Api Int Bool)
+-- TI  (SCast B Int ) (Api Int Bool) :: Natural
+-- = 2
 
 type Api a b =
   K 'A
