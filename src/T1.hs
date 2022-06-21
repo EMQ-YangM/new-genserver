@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
@@ -17,6 +18,7 @@
 
 module T1 where
 
+import Control.Concurrent
 import Data.Kind
 import GHC.Base
 import GHC.TypeLits
@@ -67,9 +69,9 @@ class Apply (c :: * -> Constraint) (fs :: [*]) where
 -- >>> :kind! K
 -- K :: *
 -- = Sum '[Int, Bool, [Char], Float, Double, [Int]]
-type K = Sum [Int, Bool, String, Float, Double, [Int]]
+type K0 = Sum [Int, Bool, String, Float, Double, [Int]]
 
-instance Arbitrary K where
+instance Arbitrary K0 where
   arbitrary =
     oneof
       [ inject <$> (arbitrary :: Gen Int),
@@ -84,12 +86,12 @@ instance Arbitrary K where
 -- "[25,23,-5]"
 t1 :: IO String
 t1 = do
-  k <- generate (arbitrary :: Gen K)
+  k <- generate (arbitrary :: Gen K0)
   pure $ apply @F f k
 
 -- >>> show val
 -- "[0,1,5,3,1,2,4]"
-val :: [K]
+val :: [K0]
 val =
   [ inject (1 :: Int),
     inject True,
@@ -125,6 +127,59 @@ instance F Double where
 
 instance F [Int] where
   f = show
+
+newtype Cast msg = Cast msg
+
+newtype Get resp = Get (MVar resp)
+
+data Call req resp = Call req (MVar resp)
+
+instance Show (Get resp) where
+  show _ = "Get :"
+
+instance Show (Cast msg) where
+  show _ = "Cast :"
+
+instance Show (Call req resp) where
+  show _ = "Call :"
+
+data A where
+  A :: Cast Int -> A
+
+data B where
+  B :: Get Int -> B
+
+data C where
+  C :: Call Int () -> C
+
+data D a where
+  D :: Cast a -> D a
+
+instance F A where
+  f (A c) = "A" ++ show c
+
+instance F B where
+  f (B c) = "B" ++ show c
+
+instance F C where
+  f (C c) = "C" ++ show c
+
+instance F (D a) where
+  f (D c) = "D" ++ show c
+
+type TTI a = Sum [A, B, C, D a]
+
+-- >>> :kind! forall a. [TTI a]
+-- >>> map (apply @F f) $ tti 10
+-- forall a. [TTI a] :: *
+-- = [Sum '[A, B, C, D a]]
+-- ["BGet :","DCast :","ACast :"]
+tti :: forall a. a -> [TTI a]
+tti a =
+  [ inject $ B $ Get (undefined :: MVar Int),
+    inject $ D $ Cast a,
+    inject $ A $ Cast (1 :: Int)
+  ]
 
 ---------------------------------------------------------------------------
 instance constraint g0 => Apply constraint '[g0] where

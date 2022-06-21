@@ -13,6 +13,7 @@
 module N1 where
 
 import Control.Concurrent
+import qualified T1 as T1
 
 ------------------------------------------------
 data l :+: r
@@ -73,7 +74,7 @@ get _ = SGet @resp undefined
 cast :: forall msg a. (Cast msg -> a) -> msg -> SCast msg
 cast _ = SCast @msg
 
-call :: forall req resp a. (Call req resp -> a) -> req -> SCall req resp
+call :: forall a req resp. (Call req resp -> a) -> req -> SCall req resp
 call _ req = SCall @req @resp req undefined
 
 ------------------------------------------------ example
@@ -91,15 +92,27 @@ data SigV a b where
   SigV1 :: SCall a b -> SigV a b
 
 -- >>> :kind! Api1 Int String
--- Api1 Int String :: [*]
--- = '[SCall Int Bool, SCast Int, SGet Bool, SCall Int Bool,
---     SCall [Char] Bool]
+-- Api1 Int String :: *
+-- = Sum
+--     '[SCall Int Bool, SCast Int, SGet Bool, SCall Int Bool,
+--       SCall [Char] Bool]
 type Api1 a b =
-  [ K 'A,
-    K 'B,
-    K 'C,
-    K ('Arg @a),
-    K ('Arg1 @b)
+  T1.Sum
+    '[ K 'A,
+       K 'B,
+       K 'C,
+       K ('Arg @a),
+       K ('Arg1 @b)
+     ]
+
+-- >>> show (t1t 10 30)
+-- "[0,1,2]"
+t1t :: forall a b. a -> b -> [Api1 a b]
+t1t a b =
+  [ T1.inject $ call A 1,
+    T1.inject $ cast B 1,
+    T1.inject $ get C
+    -- T1.inject $ call @(Arg a) Arg a
   ]
 
 type Api a b =
