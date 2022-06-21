@@ -107,13 +107,13 @@ type Api1 a b =
 
 -- >>> show (t1t 10 30)
 -- "[0,1,2]"
-t1t :: forall a b. a -> b -> [Api1 a b]
-t1t a b =
-  [ T1.inject $ call A 1,
-    T1.inject $ cast B 1,
-    T1.inject $ get C
-    -- T1.inject $ call @(Arg a) Arg a
-  ]
+-- t1t :: forall a b. a -> b -> [Api1 a b]
+-- t1t a b =
+--   [ T1.inject $ call A 1,
+--     T1.inject $ cast B 1,
+--     T1.inject $ get C
+--     -- T1.inject $ call @(Arg a) Arg a
+--   ]
 
 type Api a b =
   K 'A

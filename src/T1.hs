@@ -18,6 +18,12 @@
 
 module T1 where
 
+import Codec.CBOR.Decoding
+import Codec.CBOR.Encoding
+import Codec.CBOR.Pretty (prettyHexEnc)
+import Codec.CBOR.Read
+import Codec.CBOR.Write (toLazyByteString)
+import Codec.Serialise
 import Control.Concurrent
 import Data.Kind
 import GHC.Base
@@ -71,6 +77,76 @@ class Apply (c :: * -> Constraint) (fs :: [*]) where
 -- = Sum '[Int, Bool, [Char], Float, Double, [Int]]
 type K0 = Sum [Int, Bool, String, Float, Double, [Int]]
 
+instance Serialise g0 => Serialise (Sum '[g0]) where
+  encode (Sum 0 t) =
+    encodeListLen 2
+      <> encodeInt 0
+      <> encode (unsafeCoerce t :: g0)
+  decode = do
+    len <- decodeListLen
+    i <- decodeInt
+    case (len, i) of
+      (2, 0) -> Sum 0 <$> decode @g0
+      _ -> fail "decode Sum r failed"
+
+instance
+  ( Serialise g0,
+    Serialise g1
+  ) =>
+  Serialise
+    ( Sum
+        '[ g0,
+           g1
+         ]
+    )
+  where
+  encode (Sum 0 t) = encodeListLen 2 <> encodeInt 0 <> encode (unsafeCoerce t :: g0)
+  encode (Sum 1 t) = encodeListLen 2 <> encodeInt 1 <> encode (unsafeCoerce t :: g1)
+  decode = do
+    len <- decodeListLen
+    i <- decodeInt
+    case (len, i) of
+      (2, 0) -> Sum 0 <$> decode @g0
+      (2, 1) -> Sum 1 <$> decode @g1
+      _ -> fail "decode Sum r failed"
+
+instance
+  ( Serialise g0,
+    Serialise g1,
+    Serialise g2,
+    Serialise g3,
+    Serialise g4,
+    Serialise g5
+  ) =>
+  Serialise
+    ( Sum
+        '[ g0,
+           g1,
+           g2,
+           g3,
+           g4,
+           g5
+         ]
+    )
+  where
+  encode (Sum 0 t) = encodeListLen 2 <> encodeInt 0 <> encode (unsafeCoerce t :: g0)
+  encode (Sum 1 t) = encodeListLen 2 <> encodeInt 1 <> encode (unsafeCoerce t :: g1)
+  encode (Sum 2 t) = encodeListLen 2 <> encodeInt 2 <> encode (unsafeCoerce t :: g2)
+  encode (Sum 3 t) = encodeListLen 2 <> encodeInt 3 <> encode (unsafeCoerce t :: g3)
+  encode (Sum 4 t) = encodeListLen 2 <> encodeInt 4 <> encode (unsafeCoerce t :: g4)
+  encode (Sum 5 t) = encodeListLen 2 <> encodeInt 5 <> encode (unsafeCoerce t :: g5)
+  decode = do
+    len <- decodeListLen
+    i <- decodeInt
+    case (len, i) of
+      (2, 0) -> Sum 0 <$> decode @g0
+      (2, 1) -> Sum 1 <$> decode @g1
+      (2, 2) -> Sum 2 <$> decode @g2
+      (2, 3) -> Sum 3 <$> decode @g3
+      (2, 4) -> Sum 4 <$> decode @g4
+      (2, 5) -> Sum 5 <$> decode @g5
+      _ -> fail "decode Sum r failed"
+
 instance Arbitrary K0 where
   arbitrary =
     oneof
@@ -82,11 +158,15 @@ instance Arbitrary K0 where
         inject <$> (arbitrary :: Gen [Int])
       ]
 
--- >>> t1
--- "[25,23,-5]"
-t1 :: IO String
+--- >>> t1
+-- "3"
 t1 = do
   k <- generate (arbitrary :: Gen K0)
+  let a = prettyHexEnc $ encode k
+      a1 = toLazyByteString $ encode k
+      da = deserialiseFromBytes (decode @K0) a1
+  putStrLn a
+  print $ fmap (apply @F f . snd) da
   pure $ apply @F f k
 
 -- >>> show val
@@ -127,59 +207,6 @@ instance F Double where
 
 instance F [Int] where
   f = show
-
-newtype Cast msg = Cast msg
-
-newtype Get resp = Get (MVar resp)
-
-data Call req resp = Call req (MVar resp)
-
-instance Show (Get resp) where
-  show _ = "Get :"
-
-instance Show (Cast msg) where
-  show _ = "Cast :"
-
-instance Show (Call req resp) where
-  show _ = "Call :"
-
-data A where
-  A :: Cast Int -> A
-
-data B where
-  B :: Get Int -> B
-
-data C where
-  C :: Call Int () -> C
-
-data D a where
-  D :: Cast a -> D a
-
-instance F A where
-  f (A c) = "A" ++ show c
-
-instance F B where
-  f (B c) = "B" ++ show c
-
-instance F C where
-  f (C c) = "C" ++ show c
-
-instance F (D a) where
-  f (D c) = "D" ++ show c
-
-type TTI a = Sum [A, B, C, D a]
-
--- >>> :kind! forall a. [TTI a]
--- >>> map (apply @F f) $ tti 10
--- forall a. [TTI a] :: *
--- = [Sum '[A, B, C, D a]]
--- ["BGet :","DCast :","ACast :"]
-tti :: forall a. a -> [TTI a]
-tti a =
-  [ inject $ B $ Get (undefined :: MVar Int),
-    inject $ D $ Cast a,
-    inject $ A $ Cast (1 :: Int)
-  ]
 
 ---------------------------------------------------------------------------
 instance constraint g0 => Apply constraint '[g0] where
