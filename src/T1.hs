@@ -25,7 +25,9 @@ import Codec.CBOR.Read
 import Codec.CBOR.Write (toLazyByteString)
 import Codec.Serialise
 import Control.Concurrent
+import qualified Data.ByteString.Lazy as LBS
 import Data.Kind
+import Data.Maybe (fromMaybe)
 import GHC.Base
 import GHC.TypeLits
 import Test.QuickCheck
@@ -35,8 +37,8 @@ type Sum :: [Type] -> Type
 data Sum r where
   Sum :: Int -> t -> Sum r
 
-instance Show (Sum r) where
-  show (Sum i _) = show i
+instance Apply Show r => Show (Sum r) where
+  show s@(Sum i _) = "Sum " ++ show i ++ " " ++ apply @Show show s
 
 type Element t r = KnownNat (ElemIndex t r)
 
@@ -72,9 +74,6 @@ project = unsafeProject (unP (elemNo :: P e r))
 class Apply (c :: * -> Constraint) (fs :: [*]) where
   apply :: (forall g. c g => g -> b) -> Sum fs -> b
 
--- >>> :kind! K
--- K :: *
--- = Sum '[Int, Bool, [Char], Float, Double, [Int]]
 type K0 = Sum [Int, Bool, String, Float, Double, [Int]]
 
 instance Serialise g0 => Serialise (Sum '[g0]) where
@@ -169,8 +168,19 @@ t1 = do
   print $ fmap (apply @F f . snd) da
   pure $ apply @F f k
 
+tq = quickCheck prop_encode_decode
+
+prop_encode_decode :: K0 -> Bool
+prop_encode_decode k =
+  let a = encode k
+      a1 = toLazyByteString a
+      da = deserialiseFromBytes (decode @K0) a1
+   in case da of
+        Left _ -> False
+        Right (bs, dk) -> bs == LBS.empty && dk == k
+
 -- >>> show val
--- "[0,1,5,3,1,2,4]"
+-- "[Sum 0 1,Sum 1 True,Sum 5 [1,2,4,5],Sum 3 0.1,Sum 1 False,Sum 2 \"nice\",Sum 4 0.1]"
 val :: [K0]
 val =
   [ inject (1 :: Int),
@@ -209,6 +219,20 @@ instance F [Int] where
   f = show
 
 ---------------------------------------------------------------------------
+apply2 ::
+  forall c fs b.
+  Apply c fs =>
+  (forall g. c g => g -> g -> b) ->
+  Sum fs ->
+  Sum fs ->
+  Maybe b
+apply2 f u@(Sum n1 _) (Sum n2 r2)
+  | n1 == n2 = Just (apply @c (\r1 -> f r1 (unsafeCoerce r2)) u)
+  | otherwise = Nothing
+
+instance Apply Eq r => Eq (Sum r) where
+  sa == sb = fromMaybe False $ apply2 @Eq (==) sa sb
+
 instance constraint g0 => Apply constraint '[g0] where
   apply f (Sum 0 r) = f (unsafeCoerce r :: g0)
 
