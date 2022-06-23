@@ -25,6 +25,7 @@ import Codec.CBOR.Read
 import Codec.CBOR.Write (toLazyByteString)
 import Codec.Serialise
 import qualified Data.ByteString.Lazy as LBS
+import Data.Data
 import Data.Kind
 import Data.Maybe (fromMaybe)
 import GHC.Base
@@ -91,24 +92,25 @@ sumDecode = do
 sumShrink :: Apply Arbitrary r => Sum r -> [Sum r]
 sumShrink s@(Sum i _) = apply @Arbitrary (map (Sum i) . shrink) s
 
+type family ListLength ls where
+  ListLength '[] = 0
+  ListLength (_ ': xs) = ListLength xs + 1
+
+instance (Apply Arbitrary r, KnownNat (ListLength r)) => Arbitrary (Sum r) where
+  arbitrary =
+    oneof
+      [ apply @Arbitrary (\(_ :: k) -> Sum i <$> (arbitrary :: Gen k)) (Sum i undefined :: Sum r)
+        | i <- [0 .. (fromIntegral (natVal (Proxy :: Proxy (ListLength r))) - 1)]
+      ]
+
+  shrink = sumShrink
+
 ----------------------------------------- example
 
 type K0 = Sum [Int, Bool, String, Float, Double, [Int]]
 
-instance Arbitrary K0 where
-  arbitrary =
-    oneof
-      [ inject <$> (arbitrary :: Gen Int),
-        inject <$> (arbitrary :: Gen Bool),
-        inject <$> (arbitrary :: Gen String),
-        inject <$> (arbitrary :: Gen Float),
-        inject <$> (arbitrary :: Gen Double),
-        inject <$> (arbitrary :: Gen [Int])
-      ]
-  shrink = sumShrink
-
 --- >>> t1
--- "Sum 2 \"8YB\\t\\US\\1012796\\198847\\14407`\\1004349\\47675rem\\18469\""
+-- "Sum 5 [13,26,1,-15,14,18,29,-12,-7,-20,-14,-24,13,0,-25,-30,24]"
 t1 = do
   k <- generate (arbitrary :: Gen K0)
   let a = prettyHexEnc $ encode k
