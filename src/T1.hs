@@ -24,7 +24,6 @@ import Codec.CBOR.Pretty (prettyHexEnc)
 import Codec.CBOR.Read
 import Codec.CBOR.Write (toLazyByteString)
 import Codec.Serialise
-import Control.Concurrent
 import qualified Data.ByteString.Lazy as LBS
 import Data.Kind
 import Data.Maybe (fromMaybe)
@@ -74,80 +73,27 @@ project = unsafeProject (unP (elemNo :: P e r))
 class Apply (c :: * -> Constraint) (fs :: [*]) where
   apply :: (forall g. c g => g -> b) -> Sum fs -> b
 
-type K0 = Sum [Int, Bool, String, Float, Double, [Int]]
+instance (Apply Serialise r) => Serialise (Sum r) where
+  encode = sumEncode
+  decode = sumDecode
 
-instance Serialise g0 => Serialise (Sum '[g0]) where
-  encode (Sum 0 t) =
-    encodeListLen 2
-      <> encodeInt 0
-      <> encode (unsafeCoerce t :: g0)
-  decode = do
-    len <- decodeListLen
-    i <- decodeInt
-    case (len, i) of
-      (2, 0) -> Sum 0 <$> decode @g0
-      _ -> fail "decode Sum r failed"
+sumEncode :: Apply Serialise r => Sum r -> Encoding
+sumEncode s@(Sum i _) = encodeListLen 2 <> encodeInt i <> apply @Serialise encode s
 
-instance
-  ( Serialise g0,
-    Serialise g1
-  ) =>
-  Serialise
-    ( Sum
-        '[ g0,
-           g1
-         ]
-    )
-  where
-  encode (Sum 0 t) = encodeListLen 2 <> encodeInt 0 <> encode (unsafeCoerce t :: g0)
-  encode (Sum 1 t) = encodeListLen 2 <> encodeInt 1 <> encode (unsafeCoerce t :: g1)
-  decode = do
-    len <- decodeListLen
-    i <- decodeInt
-    case (len, i) of
-      (2, 0) -> Sum 0 <$> decode @g0
-      (2, 1) -> Sum 1 <$> decode @g1
-      _ -> fail "decode Sum r failed"
-
-instance
-  ( Serialise g0,
-    Serialise g1,
-    Serialise g2,
-    Serialise g3,
-    Serialise g4,
-    Serialise g5
-  ) =>
-  Serialise
-    ( Sum
-        '[ g0,
-           g1,
-           g2,
-           g3,
-           g4,
-           g5
-         ]
-    )
-  where
-  encode (Sum 0 t) = encodeListLen 2 <> encodeInt 0 <> encode (unsafeCoerce t :: g0)
-  encode (Sum 1 t) = encodeListLen 2 <> encodeInt 1 <> encode (unsafeCoerce t :: g1)
-  encode (Sum 2 t) = encodeListLen 2 <> encodeInt 2 <> encode (unsafeCoerce t :: g2)
-  encode (Sum 3 t) = encodeListLen 2 <> encodeInt 3 <> encode (unsafeCoerce t :: g3)
-  encode (Sum 4 t) = encodeListLen 2 <> encodeInt 4 <> encode (unsafeCoerce t :: g4)
-  encode (Sum 5 t) = encodeListLen 2 <> encodeInt 5 <> encode (unsafeCoerce t :: g5)
-  decode = do
-    len <- decodeListLen
-    i <- decodeInt
-    case (len, i) of
-      (2, 0) -> Sum 0 <$> decode @g0
-      (2, 1) -> Sum 1 <$> decode @g1
-      (2, 2) -> Sum 2 <$> decode @g2
-      (2, 3) -> Sum 3 <$> decode @g3
-      (2, 4) -> Sum 4 <$> decode @g4
-      (2, 5) -> Sum 5 <$> decode @g5
-      _ -> fail "decode Sum r failed"
+sumDecode :: forall r s. Apply Serialise r => Decoder s (Sum r)
+sumDecode = do
+  len <- decodeListLen
+  i <- decodeInt
+  if len == 2
+    then apply @Serialise (\(_ :: k) -> Sum i <$> decode @k) (Sum i undefined :: Sum r)
+    else fail "decode sum failed"
 
 sumShrink :: Apply Arbitrary r => Sum r -> [Sum r]
 sumShrink s@(Sum i _) = apply @Arbitrary (map (Sum i) . shrink) s
+
+----------------------------------------- example
+
+type K0 = Sum [Int, Bool, String, Float, Double, [Int]]
 
 instance Arbitrary K0 where
   arbitrary =
@@ -162,7 +108,7 @@ instance Arbitrary K0 where
   shrink = sumShrink
 
 --- >>> t1
--- "3"
+-- "Sum 2 \"8YB\\t\\US\\1012796\\198847\\14407`\\1004349\\47675rem\\18469\""
 t1 = do
   k <- generate (arbitrary :: Gen K0)
   let a = prettyHexEnc $ encode k
@@ -170,7 +116,7 @@ t1 = do
       da = deserialiseFromBytes (decode @K0) a1
   putStrLn a
   print $ fmap (apply @F f . snd) da
-  pure $ apply @F f k
+  pure $ show k
 
 tq = quickCheck prop_encode_decode
 
