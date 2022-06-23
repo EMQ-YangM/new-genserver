@@ -146,6 +146,9 @@ instance
       (2, 5) -> Sum 5 <$> decode @g5
       _ -> fail "decode Sum r failed"
 
+sumShrink :: Apply Arbitrary r => Sum r -> [Sum r]
+sumShrink s@(Sum i _) = apply @Arbitrary (map (Sum i) . shrink) s
+
 instance Arbitrary K0 where
   arbitrary =
     oneof
@@ -156,6 +159,7 @@ instance Arbitrary K0 where
         inject <$> (arbitrary :: Gen Double),
         inject <$> (arbitrary :: Gen [Int])
       ]
+  shrink = sumShrink
 
 --- >>> t1
 -- "3"
