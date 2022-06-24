@@ -20,11 +20,9 @@ module T1 where
 
 import Codec.CBOR.Decoding
 import Codec.CBOR.Encoding
-import Codec.CBOR.Pretty (prettyHexEnc)
 import Codec.CBOR.Read
 import Codec.CBOR.Write (toLazyByteString)
 import Codec.Serialise
-import qualified Data.ByteString.Lazy as LBS
 import Data.Data
 import Data.Kind
 import Data.Maybe (fromMaybe)
@@ -107,68 +105,21 @@ instance (Apply Arbitrary r, KnownNat (ListLength r)) => Arbitrary (Sum r) where
 
 ----------------------------------------- example
 
-type K0 = Sum [Int, Bool, String, Float, Double, [Int]]
+type K0 = Sum [Int, Bool, String, Float, Double, [Int], [Bool]]
 
---- >>> t1
--- "Sum 5 [13,26,1,-15,14,18,29,-12,-7,-20,-14,-24,13,0,-25,-30,24]"
-t1 = do
-  k <- generate (arbitrary :: Gen K0)
-  let a = prettyHexEnc $ encode k
-      a1 = toLazyByteString $ encode k
-      da = deserialiseFromBytes (decode @K0) a1
-  putStrLn a
-  print $ fmap (apply @F f . snd) da
-  pure $ show k
+-- >>> tq
+-- Success {numTests = 1000, numDiscarded = 0, labels = fromList [(["index is 0"],136),(["index is 1"],137),(["index is 2"],144),(["index is 3"],125),(["index is 4"],146),(["index is 5"],159),(["index is 6"],153)], classes = fromList [], tables = fromList [], output = "+++ OK, passed 1000 tests:\n15.9% index is 5\n15.3% index is 6\n14.6% index is 4\n14.4% index is 2\n13.7% index is 1\n13.6% index is 0\n12.5% index is 3\n"}
+tq = quickCheckResult $ withMaxSuccess 1000 prop_encode_decode
 
-tq = quickCheck prop_encode_decode
-
-prop_encode_decode :: K0 -> Bool
-prop_encode_decode k =
-  let a = encode k
-      a1 = toLazyByteString a
-      da = deserialiseFromBytes (decode @K0) a1
-   in case da of
-        Left _ -> False
-        Right (bs, dk) -> bs == LBS.empty && dk == k
-
--- >>> show val
--- "[Sum 0 1,Sum 1 True,Sum 5 [1,2,4,5],Sum 3 0.1,Sum 1 False,Sum 2 \"nice\",Sum 4 0.1]"
-val :: [K0]
-val =
-  [ inject (1 :: Int),
-    inject True,
-    inject [1 :: Int, 2, 4, 5],
-    inject (0.1 :: Float),
-    inject False,
-    inject "nice",
-    inject (0.1 :: Double)
-  ]
-
--- >>> v1
--- ["1","True","[1,2,4,5]","0.1","False","\"nice\"","0.1"]
-
-v1 = map (apply @F f) val
-
-class F a where
-  f :: a -> String
-
-instance F Int where
-  f = show
-
-instance F Bool where
-  f = show
-
-instance F String where
-  f = show
-
-instance F Float where
-  f = show
-
-instance F Double where
-  f = show
-
-instance F [Int] where
-  f = show
+prop_encode_decode :: K0 -> Property
+prop_encode_decode k@(Sum i _) =
+  label ("index is " ++ show i) $
+    case deserialiseFromBytes (decode @K0)
+      . toLazyByteString
+      . encode
+      $ k of
+      Left _ -> property False
+      Right (_, dk) -> dk === k
 
 ---------------------------------------------------------------------------
 apply2 ::
@@ -282,6 +233,34 @@ instance
   apply f (Sum 3 r) = f (unsafeCoerce r :: g3)
   apply f (Sum 4 r) = f (unsafeCoerce r :: g4)
   apply f (Sum 5 r) = f (unsafeCoerce r :: g5)
+
+instance
+  ( constraint g0,
+    constraint g1,
+    constraint g2,
+    constraint g3,
+    constraint g4,
+    constraint g5,
+    constraint g6
+  ) =>
+  Apply
+    constraint
+    '[ g0,
+       g1,
+       g2,
+       g3,
+       g4,
+       g5,
+       g6
+     ]
+  where
+  apply f (Sum 0 r) = f (unsafeCoerce r :: g0)
+  apply f (Sum 1 r) = f (unsafeCoerce r :: g1)
+  apply f (Sum 2 r) = f (unsafeCoerce r :: g2)
+  apply f (Sum 3 r) = f (unsafeCoerce r :: g3)
+  apply f (Sum 4 r) = f (unsafeCoerce r :: g4)
+  apply f (Sum 5 r) = f (unsafeCoerce r :: g5)
+  apply f (Sum 6 r) = f (unsafeCoerce r :: g6)
 
 type family ElemIndex (t :: *) (ts :: [*]) :: Nat where
   ElemIndex t0 ('(:) t0 _) = 0

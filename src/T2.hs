@@ -30,18 +30,6 @@ newtype C = C (Call Int ())
 
 newtype D a = D (Cast a)
 
-instance F A where
-  f (A c) = "A" ++ show c
-
-instance F B where
-  f (B c) = "B" ++ show c
-
-instance F C where
-  f (C c) = "C" ++ show c
-
-instance Show a => F (D a) where
-  f (D c) = "D" ++ show c
-
 type TTI a = Sum [A, B, C, D a]
 
 -- >>> :kind! forall a. [TTI a]
