@@ -25,7 +25,6 @@ library
     exposed-modules: T
                    , N
                    , T1
-                   , T2
                    , N1
                    , N2
                    , S
