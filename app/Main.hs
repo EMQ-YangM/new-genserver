@@ -1,9 +1,7 @@
 module Main where
 
-import T1
+import T2
 
 main :: IO ()
 main = do
-  putStrLn "Hello, Haskell!"
   example
-  -- r
