@@ -26,6 +26,7 @@ library
                    , N
                    , T1
                    , T2
+                   , T3
                    , N1
                    , N2
                    , S
@@ -47,6 +48,7 @@ library
                  , text
                  , time
                  , QuickCheck
+                 , contra-tracer
     hs-source-dirs:   src
     default-language: Haskell2010
     ghc-options: -W
