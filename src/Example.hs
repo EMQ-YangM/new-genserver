@@ -113,16 +113,20 @@ client req tq = do
   tv3 <- get tq D
   say $ "client recv val: " ++ show tv3
 
+data WarpTracer a tracer = WarpTracer a tracer
+  deriving Show
+
 clientLowHandler
   :: (MonadSTM n, MonadTime n, MonadST n, Serialise req)
-  => Tracer n ClientTracer
+  => String
+  -> Tracer n (WarpTracer String ClientTracer)
   -> TQueue n (Api req n)
   -> TVar n (Maybe LBS.ByteString)
   -> Channel n LBS.ByteString
   -> n ()
-clientLowHandler clientTracer chan ref channel = forever $ do
+clientLowHandler name clientTracer chan ref channel = forever $ do
   sv <- atomically $ readTQueue chan
-  clientHandler clientTracer sv ref channel
+  clientHandler (contramap (WarpTracer name) clientTracer) sv ref channel
 
 class HandleM a where
   handleM ::
@@ -163,13 +167,14 @@ server tq = forever $ do
 
 serverLowHandler
   :: (MonadSTM n, MonadTime n, MonadST n, Serialise req)
-  => Tracer n ServerTracer
+  => String
+  -> Tracer n (WarpTracer String ServerTracer)
   -> TQueue n (Api req n)
   -> TVar n (Maybe LBS.ByteString)
   -> Channel n LBS.ByteString
   -> n ()
-serverLowHandler serverTracer chan ref channel =
-  forever $ serverHandler serverTracer ref chan channel
+serverLowHandler name serverTracer chan ref channel = forever
+  $ serverHandler (contramap (WarpTracer name) serverTracer) ref chan channel
 
 data ExampleReq = ExampleReq
   { title    :: String
@@ -210,7 +215,11 @@ example = do
   forkIO
       (void $ do
         threadDelay 0.3
-        clientLowHandler sayTracer clientChan clientRef delayClientChannel
+        clientLowHandler "client_low_1"
+                         sayTracer
+                         clientChan
+                         clientRef
+                         delayClientChannel
       )
     >>= flip labelThread "client_low_1"
 
@@ -226,7 +235,11 @@ example = do
 
   let delayClientChannel = delayChannel 0.04 clientChannel
   forkIO
-      (void $ clientLowHandler sayTracer clientChan clientRef delayClientChannel
+      (void $ clientLowHandler "client_low_0"
+                               sayTracer
+                               clientChan
+                               clientRef
+                               delayClientChannel
       )
     >>= flip labelThread "client_low_0"
 
@@ -238,15 +251,22 @@ example = do
 
   let delayServerChannel = delayChannel 0.04 serverChannel
   forkIO
-      (void $ serverLowHandler sayTracer serverChan serverRef delayServerChannel
+      (void $ serverLowHandler "server_low_0"
+                               sayTracer
+                               serverChan
+                               serverRef
+                               delayServerChannel
       )
     >>= flip labelThread "server_low_0"
 
   serverRef <- newTVarIO Nothing
   let delayServerChannel1 = delayChannel 0.04 serverChannel1
   forkIO
-      ( void
-      $ serverLowHandler sayTracer serverChan serverRef delayServerChannel1
+      (void $ serverLowHandler "server_low_1"
+                               sayTracer
+                               serverChan
+                               serverRef
+                               delayServerChannel1
       )
     >>= flip labelThread "server_low_1"
 
