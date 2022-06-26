@@ -6,6 +6,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,6 +16,7 @@
 
 module Example where
 
+import Codec.Serialise
 import Control.Monad
 import Control.Monad.Class.MonadFork
 import Control.Monad.Class.MonadST
@@ -25,9 +27,9 @@ import Control.Monad.Class.MonadTimer
 import Control.Monad.IOSim (ppTrace, runSimTrace, selectTraceEventsSay)
 import Control.Tracer
 import qualified Data.ByteString.Lazy as LBS
+import Method
 import Serialise
 import Sum
-import Method
 
 get ::
   forall n resp a r.
@@ -80,23 +82,32 @@ data C where
 data D where
   D :: Get Int -> D
 
-type Api n =
+data E req where
+  E :: Call req Bool -> E req
+
+type Api req n =
   Sum
     '[ K 'A,
        K 'B,
        K 'C,
-       K 'D
+       K 'D,
+       K ('E @req)
      ]
     n
 
 client ::
-  forall n.
+  forall req n.
   ( MonadSTM n,
-    MonadSay n
+    MonadSay n,
+    Serialise req
   ) =>
-  TQueue n (Api n) ->
+  req ->
+  TQueue n (Api req n) ->
   n ()
-client tq = do
+client req tq = do
+  tv0 <- call tq E req
+  say $ "client recv val: " ++ show tv0
+
   tv1 <- call tq B ()
   say $ "client recv val: " ++ show tv1
 
@@ -111,10 +122,11 @@ client tq = do
 clientLowHandler ::
   ( MonadSTM n,
     MonadTime n,
-    MonadST n
+    MonadST n,
+    Serialise req
   ) =>
   Tracer n ClientTracer ->
-  TQueue n (Api n) ->
+  TQueue n (Api req n) ->
   TVar n (Maybe LBS.ByteString) ->
   Channel n LBS.ByteString ->
   n ()
@@ -145,12 +157,19 @@ instance HandleM (SCast C String) where
 instance HandleM (SGet D Int) where
   handleM (SGet tmvar) = atomically $ putTMVar tmvar 10010
 
+instance Show req => HandleM (SCall (E req) req Bool) where
+  handleM (SCall req tmvar) = do
+    atomically $ putTMVar tmvar (show req == "\"admin\"")
+
 server ::
+  forall req n.
   ( MonadSTM n,
     MonadSay n,
-    MonadDelay n
+    MonadDelay n,
+    Show req,
+    Serialise req
   ) =>
-  TQueue n (Api n) ->
+  TQueue n (Api req n) ->
   n ()
 server tq = forever $ do
   sv <- atomically $ readTQueue tq
@@ -159,10 +178,11 @@ server tq = forever $ do
 serverLowHandler ::
   ( MonadSTM n,
     MonadTime n,
-    MonadST n
+    MonadST n,
+    Serialise req
   ) =>
   Tracer n ServerTracer ->
-  TQueue n (Api n) ->
+  TQueue n (Api req n) ->
   TVar n (Maybe LBS.ByteString) ->
   Channel n LBS.ByteString ->
   n ()
@@ -171,6 +191,7 @@ serverLowHandler serverTracer chan ref channel =
     serverHandler serverTracer ref chan channel
 
 example ::
+  forall n.
   ( MonadSTM n,
     MonadFork n,
     MonadSay n,
@@ -186,13 +207,13 @@ example = do
   ------------------------------------
   clientChan <- newTQueueIO
   clientRef <- newTVarIO Nothing
-  forkIO (void $ client clientChan) >>= flip labelThread "client"
+  forkIO (void $ client "admin" clientChan) >>= flip labelThread "client"
   forkIO (void $ clientLowHandler sayTracer clientChan clientRef clientChannel)
     >>= flip labelThread "client_low"
   ------------------------------------
   serverChan <- newTQueueIO
   serverRef <- newTVarIO Nothing
-  forkIO (void $ server serverChan)
+  forkIO (void $ server @String serverChan)
     >>= flip labelThread "server"
   let delayServerChannel = delayChannel 0.04 serverChannel
   forkIO (void $ serverLowHandler sayTracer serverChan serverRef delayServerChannel)

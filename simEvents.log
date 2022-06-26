@@ -42,7 +42,7 @@ Time 0s    - ThreadId [3]  server - EventDeschedule Blocked
 Time 0s    - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0s    - ThreadId [4]  server_low - EventUnblocked []
 Time 0s    - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0s    - ThreadId [2]  client_low - EventSay "ClientSendIndex 1 1970-01-01 00:00:00 UTC"
+Time 0s    - ThreadId [2]  client_low - EventSay "ClientSendIndex 4 1970-01-01 00:00:00 UTC"
 Time 0s    - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
 Time 0s    - ThreadId [2]  client_low - EventUnblocked []
 Time 0s    - ThreadId [2]  client_low - EventDeschedule Yield
@@ -66,7 +66,7 @@ Time 0.04s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 9) (Just
 Time 0.04s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.04s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.04s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.04s - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (1,Nothing)) 1970-01-01 00:00:00.04 UTC"
+Time 0.04s - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (4,Nothing)) 1970-01-01 00:00:00.04 UTC"
 Time 0.04s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
 Time 0.04s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.04s - ThreadId [4]  server_low - EventDeschedule Yield
@@ -137,7 +137,7 @@ Time 0.08s - ThreadId [1]  client - EventUnblocked []
 Time 0.08s - ThreadId [1]  client - EventDeschedule Yield
 Time 0.08s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 2) Nothing] Nothing
 Time 0.08s - ThreadId [2]  client_low - EventDeschedule Blocked
-Time 0.08s - ThreadId [1]  client - EventSay "client recv val: \"well\""
+Time 0.08s - ThreadId [1]  client - EventSay "client recv val: True"
 Time 0.08s - ThreadId [1]  client - EventTxCommitted [] [Labelled (TVarId 14) Nothing] Nothing
 Time 0.08s - ThreadId [1]  client - EventUnblocked []
 Time 0.08s - ThreadId [1]  client - EventDeschedule Yield
@@ -150,7 +150,7 @@ Time 0.08s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.08s - ThreadId [2]  client_low - EventDeschedule Yield
 Time 0.08s - ThreadId [1]  client - EventTxBlocked [Labelled (TVarId 14) Nothing] Nothing
 Time 0.08s - ThreadId [1]  client - EventDeschedule Blocked
-Time 0.08s - ThreadId [2]  client_low - EventSay "ClientSendIndex 0 1970-01-01 00:00:00.08 UTC"
+Time 0.08s - ThreadId [2]  client_low - EventSay "ClientSendIndex 1 1970-01-01 00:00:00.08 UTC"
 Time 0.08s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
 Time 0.08s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
 Time 0.08s - ThreadId [2]  client_low - EventUnblocked [ThreadId [4]]
@@ -175,7 +175,7 @@ Time 0.12s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 15) (Jus
 Time 0.12s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.12s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.12s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.12s - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (0,Nothing)) 1970-01-01 00:00:00.12 UTC"
+Time 0.12s - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (1,Nothing)) 1970-01-01 00:00:00.12 UTC"
 Time 0.12s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
 Time 0.12s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.12s - ThreadId [4]  server_low - EventDeschedule Yield
@@ -210,158 +210,204 @@ Time 0.16s - ThreadId [3]  server - EventUnblocked []
 Time 0.16s - ThreadId [3]  server - EventDeschedule Yield
 Time 0.16s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 19) Nothing] Nothing
 Time 0.16s - ThreadId [4]  server_low - EventDeschedule Blocked
-Time 0.16s - ThreadId [3]  server - EventTimerCreated (TimeoutId 5) (TVarId 20) (Time 0.26s)
-Time 0.16s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 20) (Just "<<timeout-state 5>>")] Nothing
+Time 0.16s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 19) Nothing] [] Nothing
+Time 0.16s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 19) Nothing]
+Time 0.16s - ThreadId [3]  server - EventUnblocked [ThreadId [4]]
+Time 0.16s - ThreadId [3]  server - EventDeschedule Yield
+Time 0.16s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 19) Nothing] [] Nothing
+Time 0.16s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.16s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.16s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
 Time 0.16s - ThreadId [3]  server - EventDeschedule Blocked
-Time 0.26s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 5)
-Time 0.26s - ThreadId [3]  server - EventTxWakeup [Labelled (TVarId 20) (Just "<<timeout-state 5>>")]
-Time 0.26s - ThreadId [3]  server - EventTxCommitted [] [] Nothing
-Time 0.26s - ThreadId [3]  server - EventUnblocked []
-Time 0.26s - ThreadId [3]  server - EventDeschedule Yield
-Time 0.26s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 19) Nothing] [] Nothing
-Time 0.26s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 19) Nothing]
-Time 0.26s - ThreadId [3]  server - EventUnblocked [ThreadId [4]]
-Time 0.26s - ThreadId [3]  server - EventDeschedule Yield
-Time 0.26s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 19) Nothing] [] Nothing
-Time 0.26s - ThreadId [4]  server_low - EventUnblocked []
-Time 0.26s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.26s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
-Time 0.26s - ThreadId [3]  server - EventDeschedule Blocked
-Time 0.26s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverRespFromUpLevelApp 1970-01-01 00:00:00.26 UTC)"
-Time 0.26s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 1) Nothing]
-Time 0.26s - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
-Time 0.26s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.26s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventUnblocked []
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.26s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverSendRespBack 1970-01-01 00:00:00.26 UTC)"
-Time 0.26s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
-Time 0.26s - ThreadId [4]  server_low - EventUnblocked []
-Time 0.26s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.26s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 3) Nothing] [] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventUnblocked []
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.26s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
-Time 0.26s - ThreadId [4]  server_low - EventDeschedule Blocked
-Time 0.26s - ThreadId [2]  client_low - EventSay "ClientMethod (CallSenderRecvAndDecodeSuccess 1970-01-01 00:00:00.26 UTC)"
-Time 0.26s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 14) Nothing] [] Nothing
-Time 0.26s - ThreadId [1]  client - EventTxWakeup [Labelled (TVarId 14) Nothing]
-Time 0.26s - ThreadId [2]  client_low - EventUnblocked [ThreadId [1]]
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.26s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 14) Nothing] [] Nothing
-Time 0.26s - ThreadId [1]  client - EventUnblocked []
-Time 0.26s - ThreadId [1]  client - EventDeschedule Yield
-Time 0.26s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 2) Nothing] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Blocked
-Time 0.26s - ThreadId [1]  client - EventSay "client recv val: True"
-Time 0.26s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 2) Nothing]
-Time 0.26s - ThreadId [1]  client - EventUnblocked [ThreadId [2]]
-Time 0.26s - ThreadId [1]  client - EventDeschedule Yield
-Time 0.26s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventUnblocked []
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.26s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
-Time 0.26s - ThreadId [1]  client - EventUnblocked []
-Time 0.26s - ThreadId [1]  client - EventDeschedule Yield
-Time 0.26s - ThreadId [2]  client_low - EventSay "ClientSendIndex 2 1970-01-01 00:00:00.26 UTC"
-Time 0.26s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
-Time 0.26s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
-Time 0.26s - ThreadId [2]  client_low - EventUnblocked [ThreadId [4]]
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.26s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
-Time 0.26s - ThreadId [1]  client - EventUnblocked []
-Time 0.26s - ThreadId [1]  client - EventDeschedule Yield
-Time 0.26s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
-Time 0.26s - ThreadId [4]  server_low - EventUnblocked []
-Time 0.26s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.26s - ThreadId [2]  client_low - EventSay "ClientMethod (CastSenderMsg 1970-01-01 00:00:00.26 UTC)"
-Time 0.26s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventUnblocked []
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.26s - ThreadId [1]  client - EventTxCommitted [] [Labelled (TVarId 22) Nothing] Nothing
-Time 0.26s - ThreadId [1]  client - EventUnblocked []
-Time 0.26s - ThreadId [1]  client - EventDeschedule Yield
-Time 0.26s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 6) (TVarId 23) (Time 0.3s)
-Time 0.26s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 23) (Just "<<timeout-state 6>>")] Nothing
-Time 0.26s - ThreadId [4]  server_low - EventDeschedule Blocked
-Time 0.26s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventUnblocked []
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.26s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
-Time 0.26s - ThreadId [1]  client - EventUnblocked []
-Time 0.26s - ThreadId [1]  client - EventDeschedule Yield
-Time 0.26s - ThreadId [2]  client_low - EventSay "ClientSendIndex 2 1970-01-01 00:00:00.26 UTC"
-Time 0.26s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
-Time 0.26s - ThreadId [2]  client_low - EventDeschedule Blocked
-Time 0.26s - ThreadId [1]  client - EventTxBlocked [Labelled (TVarId 22) Nothing] Nothing
-Time 0.26s - ThreadId [1]  client - EventDeschedule Blocked
-Time 0.3s  - ThreadId [-1] timer - EventTimerExpired (TimeoutId 6)
-Time 0.3s  - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 23) (Just "<<timeout-state 6>>")]
-Time 0.3s  - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
-Time 0.3s  - ThreadId [4]  server_low - EventUnblocked []
-Time 0.3s  - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.3s  - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (2,Nothing)) 1970-01-01 00:00:00.3 UTC"
-Time 0.3s  - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
-Time 0.3s  - ThreadId [4]  server_low - EventUnblocked []
-Time 0.3s  - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.3s  - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
-Time 0.3s  - ThreadId [4]  server_low - EventUnblocked []
-Time 0.3s  - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.3s  - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
-Time 0.3s  - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
-Time 0.3s  - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
-Time 0.3s  - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.3s  - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
-Time 0.3s  - ThreadId [2]  client_low - EventUnblocked []
-Time 0.3s  - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.3s  - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 7) (TVarId 25) (Time 0.34s)
-Time 0.3s  - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 25) (Just "<<timeout-state 7>>")] Nothing
-Time 0.3s  - ThreadId [4]  server_low - EventDeschedule Blocked
-Time 0.3s  - ThreadId [2]  client_low - EventSay "ClientMethod (CastSenderMsg 1970-01-01 00:00:00.3 UTC)"
-Time 0.3s  - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
-Time 0.3s  - ThreadId [2]  client_low - EventDeschedule Blocked
+Time 0.16s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverRespFromUpLevelApp 1970-01-01 00:00:00.16 UTC)"
+Time 0.16s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 1) Nothing]
+Time 0.16s - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
+Time 0.16s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.16s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.16s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverSendRespBack 1970-01-01 00:00:00.16 UTC)"
+Time 0.16s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.16s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.16s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.16s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 3) Nothing] [] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.16s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
+Time 0.16s - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.16s - ThreadId [2]  client_low - EventSay "ClientMethod (CallSenderRecvAndDecodeSuccess 1970-01-01 00:00:00.16 UTC)"
+Time 0.16s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 14) Nothing] [] Nothing
+Time 0.16s - ThreadId [1]  client - EventTxWakeup [Labelled (TVarId 14) Nothing]
+Time 0.16s - ThreadId [2]  client_low - EventUnblocked [ThreadId [1]]
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.16s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 14) Nothing] [] Nothing
+Time 0.16s - ThreadId [1]  client - EventUnblocked []
+Time 0.16s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.16s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 2) Nothing] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Blocked
+Time 0.16s - ThreadId [1]  client - EventSay "client recv val: \"well\""
+Time 0.16s - ThreadId [1]  client - EventTxCommitted [] [Labelled (TVarId 20) Nothing] Nothing
+Time 0.16s - ThreadId [1]  client - EventUnblocked []
+Time 0.16s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.16s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 2) Nothing]
+Time 0.16s - ThreadId [1]  client - EventUnblocked [ThreadId [2]]
+Time 0.16s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.16s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.16s - ThreadId [1]  client - EventTxBlocked [Labelled (TVarId 20) Nothing] Nothing
+Time 0.16s - ThreadId [1]  client - EventDeschedule Blocked
+Time 0.16s - ThreadId [2]  client_low - EventSay "ClientSendIndex 0 1970-01-01 00:00:00.16 UTC"
+Time 0.16s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.16s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
+Time 0.16s - ThreadId [2]  client_low - EventUnblocked [ThreadId [4]]
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.16s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.16s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.16s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.16s - ThreadId [2]  client_low - EventTxCommitted [] [] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.16s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 5) (TVarId 21) (Time 0.2s)
+Time 0.16s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 21) (Just "<<timeout-state 5>>")] Nothing
+Time 0.16s - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.16s - ThreadId [2]  client_low - EventSay "ClientMethod (CallSenderSendReq 1970-01-01 00:00:00.16 UTC)"
+Time 0.16s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.16s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 1) Nothing] Nothing
+Time 0.16s - ThreadId [2]  client_low - EventDeschedule Blocked
+Time 0.2s  - ThreadId [-1] timer - EventTimerExpired (TimeoutId 5)
+Time 0.2s  - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 21) (Just "<<timeout-state 5>>")]
+Time 0.2s  - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.2s  - ThreadId [4]  server_low - EventUnblocked []
+Time 0.2s  - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.2s  - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (0,Nothing)) 1970-01-01 00:00:00.2 UTC"
+Time 0.2s  - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
+Time 0.2s  - ThreadId [4]  server_low - EventUnblocked []
+Time 0.2s  - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.2s  - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.2s  - ThreadId [4]  server_low - EventUnblocked []
+Time 0.2s  - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.2s  - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.2s  - ThreadId [4]  server_low - EventUnblocked []
+Time 0.2s  - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.2s  - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 6) (TVarId 23) (Time 0.24s)
+Time 0.2s  - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 23) (Just "<<timeout-state 6>>")] Nothing
+Time 0.2s  - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.24s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 6)
+Time 0.24s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 23) (Just "<<timeout-state 6>>")]
+Time 0.24s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.24s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.24s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.24s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverRecvReqSuccess 1970-01-01 00:00:00.24 UTC)"
+Time 0.24s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
+Time 0.24s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.24s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.24s - ThreadId [4]  server_low - EventTxCommitted [] [Labelled (TVarId 25) Nothing] Nothing
+Time 0.24s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.24s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.24s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverInjectSCallToChan 1970-01-01 00:00:00.24 UTC)"
+Time 0.24s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
+Time 0.24s - ThreadId [3]  server - EventTxWakeup [Labelled (TVarId 4) Nothing]
+Time 0.24s - ThreadId [4]  server_low - EventUnblocked [ThreadId [3]]
+Time 0.24s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.24s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
+Time 0.24s - ThreadId [3]  server - EventUnblocked []
+Time 0.24s - ThreadId [3]  server - EventDeschedule Yield
+Time 0.24s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 25) Nothing] Nothing
+Time 0.24s - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.24s - ThreadId [3]  server - EventTimerCreated (TimeoutId 7) (TVarId 26) (Time 0.34s)
+Time 0.24s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 26) (Just "<<timeout-state 7>>")] Nothing
+Time 0.24s - ThreadId [3]  server - EventDeschedule Blocked
 Time 0.34s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 7)
-Time 0.34s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 25) (Just "<<timeout-state 7>>")]
-Time 0.34s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
-Time 0.34s - ThreadId [4]  server_low - EventUnblocked []
-Time 0.34s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.34s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
-Time 0.34s - ThreadId [4]  server_low - EventUnblocked []
-Time 0.34s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.34s - ThreadId [4]  server_low - EventSay "ServerMethod (CastRecverRecvMsgSuccess 1970-01-01 00:00:00.34 UTC)"
-Time 0.34s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
-Time 0.34s - ThreadId [3]  server - EventTxWakeup [Labelled (TVarId 4) Nothing]
-Time 0.34s - ThreadId [4]  server_low - EventUnblocked [ThreadId [3]]
-Time 0.34s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.34s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
+Time 0.34s - ThreadId [3]  server - EventTxWakeup [Labelled (TVarId 26) (Just "<<timeout-state 7>>")]
+Time 0.34s - ThreadId [3]  server - EventTxCommitted [] [] Nothing
 Time 0.34s - ThreadId [3]  server - EventUnblocked []
 Time 0.34s - ThreadId [3]  server - EventDeschedule Yield
+Time 0.34s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 25) Nothing] [] Nothing
+Time 0.34s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 25) Nothing]
+Time 0.34s - ThreadId [3]  server - EventUnblocked [ThreadId [4]]
+Time 0.34s - ThreadId [3]  server - EventDeschedule Yield
+Time 0.34s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 25) Nothing] [] Nothing
+Time 0.34s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.34s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.34s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
+Time 0.34s - ThreadId [3]  server - EventDeschedule Blocked
+Time 0.34s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverRespFromUpLevelApp 1970-01-01 00:00:00.34 UTC)"
+Time 0.34s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
+Time 0.34s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 1) Nothing]
+Time 0.34s - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
+Time 0.34s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.34s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
+Time 0.34s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.34s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.34s - ThreadId [4]  server_low - EventSay "ServerMethod (CallRecverSendRespBack 1970-01-01 00:00:00.34 UTC)"
 Time 0.34s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.34s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.34s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.34s - ThreadId [3]  server - EventSay "server recv msg: wellcome"
-Time 0.34s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
-Time 0.34s - ThreadId [3]  server - EventDeschedule Blocked
+Time 0.34s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 3) Nothing] [] Nothing
+Time 0.34s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.34s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.34s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
+Time 0.34s - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.34s - ThreadId [2]  client_low - EventSay "ClientMethod (CallSenderRecvAndDecodeSuccess 1970-01-01 00:00:00.34 UTC)"
+Time 0.34s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 20) Nothing] [] Nothing
+Time 0.34s - ThreadId [1]  client - EventTxWakeup [Labelled (TVarId 20) Nothing]
+Time 0.34s - ThreadId [2]  client_low - EventUnblocked [ThreadId [1]]
+Time 0.34s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.34s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 20) Nothing] [] Nothing
+Time 0.34s - ThreadId [1]  client - EventUnblocked []
+Time 0.34s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.34s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 2) Nothing] Nothing
+Time 0.34s - ThreadId [2]  client_low - EventDeschedule Blocked
+Time 0.34s - ThreadId [1]  client - EventSay "client recv val: True"
+Time 0.34s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.34s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 2) Nothing]
+Time 0.34s - ThreadId [1]  client - EventUnblocked [ThreadId [2]]
+Time 0.34s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.34s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.34s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.34s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.34s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.34s - ThreadId [1]  client - EventUnblocked []
+Time 0.34s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.34s - ThreadId [2]  client_low - EventSay "ClientSendIndex 2 1970-01-01 00:00:00.34 UTC"
+Time 0.34s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.34s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
+Time 0.34s - ThreadId [2]  client_low - EventUnblocked [ThreadId [4]]
+Time 0.34s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.34s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.34s - ThreadId [1]  client - EventUnblocked []
+Time 0.34s - ThreadId [1]  client - EventDeschedule Yield
 Time 0.34s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
-Time 0.34s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
-Time 0.34s - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
+Time 0.34s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.34s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.34s - ThreadId [2]  client_low - EventSay "ClientMethod (CastSenderMsg 1970-01-01 00:00:00.34 UTC)"
 Time 0.34s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
 Time 0.34s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.34s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.34s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 8) (TVarId 27) (Time 0.38s)
-Time 0.34s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 27) (Just "<<timeout-state 8>>")] Nothing
+Time 0.34s - ThreadId [1]  client - EventTxCommitted [] [Labelled (TVarId 28) Nothing] Nothing
+Time 0.34s - ThreadId [1]  client - EventUnblocked []
+Time 0.34s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.34s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 8) (TVarId 29) (Time 0.38s)
+Time 0.34s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 29) (Just "<<timeout-state 8>>")] Nothing
 Time 0.34s - ThreadId [4]  server_low - EventDeschedule Blocked
 Time 0.34s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
 Time 0.34s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.34s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.34s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.34s - ThreadId [1]  client - EventUnblocked []
+Time 0.34s - ThreadId [1]  client - EventDeschedule Yield
 Time 0.34s - ThreadId [2]  client_low - EventSay "ClientSendIndex 2 1970-01-01 00:00:00.34 UTC"
 Time 0.34s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
 Time 0.34s - ThreadId [2]  client_low - EventDeschedule Blocked
+Time 0.34s - ThreadId [1]  client - EventTxBlocked [Labelled (TVarId 28) Nothing] Nothing
+Time 0.34s - ThreadId [1]  client - EventDeschedule Blocked
 Time 0.38s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 8)
-Time 0.38s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 27) (Just "<<timeout-state 8>>")]
+Time 0.38s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 29) (Just "<<timeout-state 8>>")]
 Time 0.38s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.38s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.38s - ThreadId [4]  server_low - EventDeschedule Yield
@@ -379,14 +425,14 @@ Time 0.38s - ThreadId [4]  server_low - EventDeschedule Yield
 Time 0.38s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
 Time 0.38s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.38s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.38s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 9) (TVarId 29) (Time 0.42s)
-Time 0.38s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 29) (Just "<<timeout-state 9>>")] Nothing
+Time 0.38s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 9) (TVarId 31) (Time 0.42s)
+Time 0.38s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 31) (Just "<<timeout-state 9>>")] Nothing
 Time 0.38s - ThreadId [4]  server_low - EventDeschedule Blocked
 Time 0.38s - ThreadId [2]  client_low - EventSay "ClientMethod (CastSenderMsg 1970-01-01 00:00:00.38 UTC)"
 Time 0.38s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
 Time 0.38s - ThreadId [2]  client_low - EventDeschedule Blocked
 Time 0.42s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 9)
-Time 0.42s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 29) (Just "<<timeout-state 9>>")]
+Time 0.42s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 31) (Just "<<timeout-state 9>>")]
 Time 0.42s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.42s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.42s - ThreadId [4]  server_low - EventDeschedule Yield
@@ -414,17 +460,17 @@ Time 0.42s - ThreadId [4]  server_low - EventDeschedule Yield
 Time 0.42s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
 Time 0.42s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.42s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.42s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 10) (TVarId 31) (Time 0.46s)
-Time 0.42s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 31) (Just "<<timeout-state 10>>")] Nothing
+Time 0.42s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 10) (TVarId 33) (Time 0.46s)
+Time 0.42s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 33) (Just "<<timeout-state 10>>")] Nothing
 Time 0.42s - ThreadId [4]  server_low - EventDeschedule Blocked
 Time 0.42s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
 Time 0.42s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.42s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.42s - ThreadId [2]  client_low - EventSay "ClientSendIndex 3 1970-01-01 00:00:00.42 UTC"
+Time 0.42s - ThreadId [2]  client_low - EventSay "ClientSendIndex 2 1970-01-01 00:00:00.42 UTC"
 Time 0.42s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
 Time 0.42s - ThreadId [2]  client_low - EventDeschedule Blocked
 Time 0.46s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 10)
-Time 0.46s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 31) (Just "<<timeout-state 10>>")]
+Time 0.46s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 33) (Just "<<timeout-state 10>>")]
 Time 0.46s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.46s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.46s - ThreadId [4]  server_low - EventDeschedule Yield
@@ -442,17 +488,14 @@ Time 0.46s - ThreadId [4]  server_low - EventDeschedule Yield
 Time 0.46s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
 Time 0.46s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.46s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.46s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 11) (TVarId 33) (Time 0.5s)
-Time 0.46s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 33) (Just "<<timeout-state 11>>")] Nothing
+Time 0.46s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 11) (TVarId 35) (Time 0.5s)
+Time 0.46s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 35) (Just "<<timeout-state 11>>")] Nothing
 Time 0.46s - ThreadId [4]  server_low - EventDeschedule Blocked
-Time 0.46s - ThreadId [2]  client_low - EventTxCommitted [] [] Nothing
-Time 0.46s - ThreadId [2]  client_low - EventUnblocked []
-Time 0.46s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.46s - ThreadId [2]  client_low - EventSay "ClientMethod (GetSenderRecvResponse 1970-01-01 00:00:00.46 UTC)"
-Time 0.46s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 1) Nothing] Nothing
+Time 0.46s - ThreadId [2]  client_low - EventSay "ClientMethod (CastSenderMsg 1970-01-01 00:00:00.46 UTC)"
+Time 0.46s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
 Time 0.46s - ThreadId [2]  client_low - EventDeschedule Blocked
 Time 0.5s  - ThreadId [-1] timer - EventTimerExpired (TimeoutId 11)
-Time 0.5s  - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 33) (Just "<<timeout-state 11>>")]
+Time 0.5s  - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 35) (Just "<<timeout-state 11>>")]
 Time 0.5s  - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.5s  - ThreadId [4]  server_low - EventUnblocked []
 Time 0.5s  - ThreadId [4]  server_low - EventDeschedule Yield
@@ -474,72 +517,138 @@ Time 0.5s  - ThreadId [3]  server - EventSay "server recv msg: wellcome"
 Time 0.5s  - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
 Time 0.5s  - ThreadId [3]  server - EventDeschedule Blocked
 Time 0.5s  - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
-Time 0.5s  - ThreadId [4]  server_low - EventUnblocked []
+Time 0.5s  - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
+Time 0.5s  - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
 Time 0.5s  - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.5s  - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 12) (TVarId 35) (Time 0.54s)
-Time 0.5s  - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 35) (Just "<<timeout-state 12>>")] Nothing
+Time 0.5s  - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.5s  - ThreadId [2]  client_low - EventUnblocked []
+Time 0.5s  - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.5s  - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 12) (TVarId 37) (Time 0.54s)
+Time 0.5s  - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 37) (Just "<<timeout-state 12>>")] Nothing
 Time 0.5s  - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.5s  - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 2) Nothing] [] Nothing
+Time 0.5s  - ThreadId [2]  client_low - EventUnblocked []
+Time 0.5s  - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.5s  - ThreadId [2]  client_low - EventSay "ClientSendIndex 3 1970-01-01 00:00:00.5 UTC"
+Time 0.5s  - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
+Time 0.5s  - ThreadId [2]  client_low - EventDeschedule Blocked
 Time 0.54s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 12)
-Time 0.54s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 35) (Just "<<timeout-state 12>>")]
+Time 0.54s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 37) (Just "<<timeout-state 12>>")]
 Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.54s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.54s - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (3,Nothing)) 1970-01-01 00:00:00.54 UTC"
+Time 0.54s - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (2,Nothing)) 1970-01-01 00:00:00.54 UTC"
 Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
 Time 0.54s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [] [Labelled (TVarId 37) Nothing] Nothing
-Time 0.54s - ThreadId [4]  server_low - EventUnblocked []
-Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.54s - ThreadId [4]  server_low - EventSay "ServerMethod (GetRecverInjectChan 1970-01-01 00:00:00.54 UTC)"
-Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
-Time 0.54s - ThreadId [3]  server - EventTxWakeup [Labelled (TVarId 4) Nothing]
-Time 0.54s - ThreadId [4]  server_low - EventUnblocked [ThreadId [3]]
-Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.54s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
-Time 0.54s - ThreadId [3]  server - EventUnblocked []
-Time 0.54s - ThreadId [3]  server - EventDeschedule Yield
-Time 0.54s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 37) Nothing] Nothing
-Time 0.54s - ThreadId [4]  server_low - EventDeschedule Blocked
-Time 0.54s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 37) Nothing] [] Nothing
-Time 0.54s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 37) Nothing]
-Time 0.54s - ThreadId [3]  server - EventUnblocked [ThreadId [4]]
-Time 0.54s - ThreadId [3]  server - EventDeschedule Yield
-Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 37) Nothing] [] Nothing
-Time 0.54s - ThreadId [4]  server_low - EventUnblocked []
-Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.54s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
-Time 0.54s - ThreadId [3]  server - EventDeschedule Blocked
-Time 0.54s - ThreadId [4]  server_low - EventSay "ServerMethod (GetRecverGetUpLevelResp 1970-01-01 00:00:00.54 UTC)"
-Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
-Time 0.54s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 1) Nothing]
-Time 0.54s - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
-Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.54s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
-Time 0.54s - ThreadId [2]  client_low - EventUnblocked []
-Time 0.54s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.54s - ThreadId [4]  server_low - EventSay "ServerMethod (GetRecverSendRespBack 1970-01-01 00:00:00.54 UTC)"
 Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
 Time 0.54s - ThreadId [4]  server_low - EventUnblocked []
 Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
-Time 0.54s - ThreadId [2]  client_low - EventSay "ClientMethod (GetSenderRecvResponseDecodeSuccess 1970-01-01 00:00:00.54 UTC)"
-Time 0.54s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 3) Nothing] [] Nothing
+Time 0.54s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.54s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 0) Nothing]
+Time 0.54s - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
+Time 0.54s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.54s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
 Time 0.54s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.54s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.54s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
+Time 0.54s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 13) (TVarId 39) (Time 0.58s)
+Time 0.54s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 39) (Just "<<timeout-state 13>>")] Nothing
 Time 0.54s - ThreadId [4]  server_low - EventDeschedule Blocked
-Time 0.54s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 22) Nothing] [] Nothing
-Time 0.54s - ThreadId [1]  client - EventTxWakeup [Labelled (TVarId 22) Nothing]
-Time 0.54s - ThreadId [2]  client_low - EventUnblocked [ThreadId [1]]
+Time 0.54s - ThreadId [2]  client_low - EventTxCommitted [] [] Nothing
+Time 0.54s - ThreadId [2]  client_low - EventUnblocked []
 Time 0.54s - ThreadId [2]  client_low - EventDeschedule Yield
-Time 0.54s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 22) Nothing] [] Nothing
-Time 0.54s - ThreadId [1]  client - EventUnblocked []
-Time 0.54s - ThreadId [1]  client - EventDeschedule Yield
-Time 0.54s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 2) Nothing] Nothing
+Time 0.54s - ThreadId [2]  client_low - EventSay "ClientMethod (GetSenderRecvResponse 1970-01-01 00:00:00.54 UTC)"
+Time 0.54s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 1) Nothing] Nothing
 Time 0.54s - ThreadId [2]  client_low - EventDeschedule Blocked
-Time 0.54s - ThreadId [1]  client - EventSay "client recv val: 10010"
-Time 0.54s - ThreadId [1]  client - EventThreadFinished
-Time 0.54s - ThreadId [1]  client - EventDeschedule Terminated
+Time 0.58s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 13)
+Time 0.58s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 39) (Just "<<timeout-state 13>>")]
+Time 0.58s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.58s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.58s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.58s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
+Time 0.58s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.58s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.58s - ThreadId [4]  server_low - EventSay "ServerMethod (CastRecverRecvMsgSuccess 1970-01-01 00:00:00.58 UTC)"
+Time 0.58s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
+Time 0.58s - ThreadId [3]  server - EventTxWakeup [Labelled (TVarId 4) Nothing]
+Time 0.58s - ThreadId [4]  server_low - EventUnblocked [ThreadId [3]]
+Time 0.58s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.58s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
+Time 0.58s - ThreadId [3]  server - EventUnblocked []
+Time 0.58s - ThreadId [3]  server - EventDeschedule Yield
+Time 0.58s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.58s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.58s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.58s - ThreadId [3]  server - EventSay "server recv msg: wellcome"
+Time 0.58s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
+Time 0.58s - ThreadId [3]  server - EventDeschedule Blocked
+Time 0.58s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 0) Nothing] [] Nothing
+Time 0.58s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.58s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.58s - ThreadId [4]  server_low - EventTimerCreated (TimeoutId 14) (TVarId 41) (Time 0.62s)
+Time 0.58s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 41) (Just "<<timeout-state 14>>")] Nothing
+Time 0.58s - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.62s - ThreadId [-1] timer - EventTimerExpired (TimeoutId 14)
+Time 0.62s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 41) (Just "<<timeout-state 14>>")]
+Time 0.62s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.62s - ThreadId [4]  server_low - EventSay "ServerRecvIndexResult (Right (3,Nothing)) 1970-01-01 00:00:00.62 UTC"
+Time 0.62s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 6) Nothing] [] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.62s - ThreadId [4]  server_low - EventTxCommitted [] [Labelled (TVarId 43) Nothing] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.62s - ThreadId [4]  server_low - EventSay "ServerMethod (GetRecverInjectChan 1970-01-01 00:00:00.62 UTC)"
+Time 0.62s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
+Time 0.62s - ThreadId [3]  server - EventTxWakeup [Labelled (TVarId 4) Nothing]
+Time 0.62s - ThreadId [4]  server_low - EventUnblocked [ThreadId [3]]
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.62s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 4) Nothing] [] Nothing
+Time 0.62s - ThreadId [3]  server - EventUnblocked []
+Time 0.62s - ThreadId [3]  server - EventDeschedule Yield
+Time 0.62s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 43) Nothing] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.62s - ThreadId [3]  server - EventTxCommitted [Labelled (TVarId 43) Nothing] [] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventTxWakeup [Labelled (TVarId 43) Nothing]
+Time 0.62s - ThreadId [3]  server - EventUnblocked [ThreadId [4]]
+Time 0.62s - ThreadId [3]  server - EventDeschedule Yield
+Time 0.62s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 43) Nothing] [] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.62s - ThreadId [3]  server - EventTxBlocked [Labelled (TVarId 4) Nothing] Nothing
+Time 0.62s - ThreadId [3]  server - EventDeschedule Blocked
+Time 0.62s - ThreadId [4]  server_low - EventSay "ServerMethod (GetRecverGetUpLevelResp 1970-01-01 00:00:00.62 UTC)"
+Time 0.62s - ThreadId [4]  server_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
+Time 0.62s - ThreadId [2]  client_low - EventTxWakeup [Labelled (TVarId 1) Nothing]
+Time 0.62s - ThreadId [4]  server_low - EventUnblocked [ThreadId [2]]
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.62s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 1) Nothing] [] Nothing
+Time 0.62s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.62s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.62s - ThreadId [4]  server_low - EventSay "ServerMethod (GetRecverSendRespBack 1970-01-01 00:00:00.62 UTC)"
+Time 0.62s - ThreadId [4]  server_low - EventTxCommitted [] [] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventUnblocked []
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Yield
+Time 0.62s - ThreadId [2]  client_low - EventSay "ClientMethod (GetSenderRecvResponseDecodeSuccess 1970-01-01 00:00:00.62 UTC)"
+Time 0.62s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 3) Nothing] [] Nothing
+Time 0.62s - ThreadId [2]  client_low - EventUnblocked []
+Time 0.62s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.62s - ThreadId [4]  server_low - EventTxBlocked [Labelled (TVarId 0) Nothing] Nothing
+Time 0.62s - ThreadId [4]  server_low - EventDeschedule Blocked
+Time 0.62s - ThreadId [2]  client_low - EventTxCommitted [Labelled (TVarId 28) Nothing] [] Nothing
+Time 0.62s - ThreadId [1]  client - EventTxWakeup [Labelled (TVarId 28) Nothing]
+Time 0.62s - ThreadId [2]  client_low - EventUnblocked [ThreadId [1]]
+Time 0.62s - ThreadId [2]  client_low - EventDeschedule Yield
+Time 0.62s - ThreadId [1]  client - EventTxCommitted [Labelled (TVarId 28) Nothing] [] Nothing
+Time 0.62s - ThreadId [1]  client - EventUnblocked []
+Time 0.62s - ThreadId [1]  client - EventDeschedule Yield
+Time 0.62s - ThreadId [2]  client_low - EventTxBlocked [Labelled (TVarId 2) Nothing] Nothing
+Time 0.62s - ThreadId [2]  client_low - EventDeschedule Blocked
+Time 0.62s - ThreadId [1]  client - EventSay "client recv val: 10010"
+Time 0.62s - ThreadId [1]  client - EventThreadFinished
+Time 0.62s - ThreadId [1]  client - EventDeschedule Terminated
 Time 10s   - ThreadId [-1] timer - EventTimerExpired (TimeoutId 0)
 Time 10s   - ThreadId []   main - EventTxWakeup [Labelled (TVarId 7) (Just "<<timeout-state 0>>")]
 Time 10s   - ThreadId []   main - EventTxCommitted [] [] Nothing
@@ -548,44 +657,53 @@ Time 10s   - ThreadId []   main - EventDeschedule Yield
 Time 10s   - ThreadId []   main - EventThreadFinished
 MainReturn (Time 10s) () [Labelled (ThreadId [2]) (Just "client_low"),Labelled (ThreadId [3]) (Just "server"),Labelled (ThreadId [4]) (Just "server_low")]
 
-ClientSendIndex 1 1970-01-01 00:00:00 UTC
+ClientSendIndex 4 1970-01-01 00:00:00 UTC
 ClientMethod (CallSenderSendReq 1970-01-01 00:00:00 UTC)
-ServerRecvIndexResult (Right (1,Nothing)) 1970-01-01 00:00:00.04 UTC
+ServerRecvIndexResult (Right (4,Nothing)) 1970-01-01 00:00:00.04 UTC
 ServerMethod (CallRecverRecvReqSuccess 1970-01-01 00:00:00.08 UTC)
 ServerMethod (CallRecverInjectSCallToChan 1970-01-01 00:00:00.08 UTC)
 ServerMethod (CallRecverRespFromUpLevelApp 1970-01-01 00:00:00.08 UTC)
 ServerMethod (CallRecverSendRespBack 1970-01-01 00:00:00.08 UTC)
 ClientMethod (CallSenderRecvAndDecodeSuccess 1970-01-01 00:00:00.08 UTC)
-client recv val: "well"
-ClientSendIndex 0 1970-01-01 00:00:00.08 UTC
+client recv val: True
+ClientSendIndex 1 1970-01-01 00:00:00.08 UTC
 ClientMethod (CallSenderSendReq 1970-01-01 00:00:00.08 UTC)
-ServerRecvIndexResult (Right (0,Nothing)) 1970-01-01 00:00:00.12 UTC
+ServerRecvIndexResult (Right (1,Nothing)) 1970-01-01 00:00:00.12 UTC
 ServerMethod (CallRecverRecvReqSuccess 1970-01-01 00:00:00.16 UTC)
 ServerMethod (CallRecverInjectSCallToChan 1970-01-01 00:00:00.16 UTC)
-ServerMethod (CallRecverRespFromUpLevelApp 1970-01-01 00:00:00.26 UTC)
-ServerMethod (CallRecverSendRespBack 1970-01-01 00:00:00.26 UTC)
-ClientMethod (CallSenderRecvAndDecodeSuccess 1970-01-01 00:00:00.26 UTC)
+ServerMethod (CallRecverRespFromUpLevelApp 1970-01-01 00:00:00.16 UTC)
+ServerMethod (CallRecverSendRespBack 1970-01-01 00:00:00.16 UTC)
+ClientMethod (CallSenderRecvAndDecodeSuccess 1970-01-01 00:00:00.16 UTC)
+client recv val: "well"
+ClientSendIndex 0 1970-01-01 00:00:00.16 UTC
+ClientMethod (CallSenderSendReq 1970-01-01 00:00:00.16 UTC)
+ServerRecvIndexResult (Right (0,Nothing)) 1970-01-01 00:00:00.2 UTC
+ServerMethod (CallRecverRecvReqSuccess 1970-01-01 00:00:00.24 UTC)
+ServerMethod (CallRecverInjectSCallToChan 1970-01-01 00:00:00.24 UTC)
+ServerMethod (CallRecverRespFromUpLevelApp 1970-01-01 00:00:00.34 UTC)
+ServerMethod (CallRecverSendRespBack 1970-01-01 00:00:00.34 UTC)
+ClientMethod (CallSenderRecvAndDecodeSuccess 1970-01-01 00:00:00.34 UTC)
 client recv val: True
-ClientSendIndex 2 1970-01-01 00:00:00.26 UTC
-ClientMethod (CastSenderMsg 1970-01-01 00:00:00.26 UTC)
-ClientSendIndex 2 1970-01-01 00:00:00.26 UTC
-ServerRecvIndexResult (Right (2,Nothing)) 1970-01-01 00:00:00.3 UTC
-ClientMethod (CastSenderMsg 1970-01-01 00:00:00.3 UTC)
-ServerMethod (CastRecverRecvMsgSuccess 1970-01-01 00:00:00.34 UTC)
-server recv msg: wellcome
+ClientSendIndex 2 1970-01-01 00:00:00.34 UTC
+ClientMethod (CastSenderMsg 1970-01-01 00:00:00.34 UTC)
 ClientSendIndex 2 1970-01-01 00:00:00.34 UTC
 ServerRecvIndexResult (Right (2,Nothing)) 1970-01-01 00:00:00.38 UTC
 ClientMethod (CastSenderMsg 1970-01-01 00:00:00.38 UTC)
 ServerMethod (CastRecverRecvMsgSuccess 1970-01-01 00:00:00.42 UTC)
 server recv msg: wellcome
-ClientSendIndex 3 1970-01-01 00:00:00.42 UTC
+ClientSendIndex 2 1970-01-01 00:00:00.42 UTC
 ServerRecvIndexResult (Right (2,Nothing)) 1970-01-01 00:00:00.46 UTC
-ClientMethod (GetSenderRecvResponse 1970-01-01 00:00:00.46 UTC)
+ClientMethod (CastSenderMsg 1970-01-01 00:00:00.46 UTC)
 ServerMethod (CastRecverRecvMsgSuccess 1970-01-01 00:00:00.5 UTC)
 server recv msg: wellcome
-ServerRecvIndexResult (Right (3,Nothing)) 1970-01-01 00:00:00.54 UTC
-ServerMethod (GetRecverInjectChan 1970-01-01 00:00:00.54 UTC)
-ServerMethod (GetRecverGetUpLevelResp 1970-01-01 00:00:00.54 UTC)
-ServerMethod (GetRecverSendRespBack 1970-01-01 00:00:00.54 UTC)
-ClientMethod (GetSenderRecvResponseDecodeSuccess 1970-01-01 00:00:00.54 UTC)
+ClientSendIndex 3 1970-01-01 00:00:00.5 UTC
+ServerRecvIndexResult (Right (2,Nothing)) 1970-01-01 00:00:00.54 UTC
+ClientMethod (GetSenderRecvResponse 1970-01-01 00:00:00.54 UTC)
+ServerMethod (CastRecverRecvMsgSuccess 1970-01-01 00:00:00.58 UTC)
+server recv msg: wellcome
+ServerRecvIndexResult (Right (3,Nothing)) 1970-01-01 00:00:00.62 UTC
+ServerMethod (GetRecverInjectChan 1970-01-01 00:00:00.62 UTC)
+ServerMethod (GetRecverGetUpLevelResp 1970-01-01 00:00:00.62 UTC)
+ServerMethod (GetRecverSendRespBack 1970-01-01 00:00:00.62 UTC)
+ClientMethod (GetSenderRecvResponseDecodeSuccess 1970-01-01 00:00:00.62 UTC)
 client recv val: 10010
