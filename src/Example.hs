@@ -98,7 +98,7 @@ client
   => req
   -> TQueue n (Api req n)
   -> n ()
-client req tq = do
+client req tq = forever $ do
   tv0 <- call tq E req
   say $ "client recv val: " ++ show tv0
 
@@ -138,7 +138,7 @@ class HandleM a where
   handleM ::
     ( MonadSay n,
       MonadDelay n,
-      MonadMonotonicTime  n,
+      MonadTime  n,
       MonadSTM n
     ) =>
     Tracer n AppServerTracer ->
@@ -179,7 +179,7 @@ server
      , MonadDelay n
      , Show req
      , Serialise req
-     , MonadMonotonicTime n
+     , MonadTime n
      )
   => Tracer n AppServerTracer
   -> TQueue n (Api req n)
