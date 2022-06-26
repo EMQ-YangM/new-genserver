@@ -1,6 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -27,6 +29,7 @@ import Control.Monad.Class.MonadTimer
 import Control.Monad.IOSim (ppTrace, runSimTrace, selectTraceEventsSay)
 import Control.Tracer
 import qualified Data.ByteString.Lazy as LBS
+import GHC.Generics (Generic)
 import Method
 import Serialise
 import Sum
@@ -159,6 +162,7 @@ instance HandleM (SGet D Int) where
 
 instance Show req => HandleM (SCall (E req) req Bool) where
   handleM (SCall req tmvar) = do
+    say $ show req
     atomically $ putTMVar tmvar (show req == "\"admin\"")
 
 server ::
@@ -190,6 +194,23 @@ serverLowHandler serverTracer chan ref channel =
   forever $
     serverHandler serverTracer ref chan channel
 
+data ExampleReq = ExampleReq
+  { title :: String,
+    position :: String,
+    va :: Int,
+    vb :: Double
+  }
+  deriving (Show, Generic, Serialise)
+
+eReq :: ExampleReq
+eReq =
+  ExampleReq
+    { title = "aaa",
+      position = "bbb",
+      va = 10,
+      vb = 0.01
+    }
+
 example ::
   forall n.
   ( MonadSTM n,
@@ -207,20 +228,26 @@ example = do
   ------------------------------------
   clientChan <- newTQueueIO
   clientRef <- newTVarIO Nothing
-  forkIO (void $ client "admin" clientChan)
+
+  forkIO (void $ client eReq clientChan)
     >>= flip labelThread "client"
+
   let delayClientChannel = delayChannel 0.04 clientChannel
   forkIO (void $ clientLowHandler sayTracer clientChan clientRef delayClientChannel)
     >>= flip labelThread "client_low"
+
   ------------------------------------
   serverChan <- newTQueueIO
   serverRef <- newTVarIO Nothing
-  forkIO (void $ server @String serverChan)
+
+  forkIO (void $ server @ExampleReq serverChan)
     >>= flip labelThread "server"
+
   let delayServerChannel = delayChannel 0.04 serverChannel
   forkIO (void $ serverLowHandler sayTracer serverChan serverRef delayServerChannel)
     >>= flip labelThread "server_low"
-  threadDelay 10
+
+  threadDelay 2
 
 sayTracer :: (MonadSay n, Show a) => Tracer n a
 sayTracer = Tracer $ \v -> say (show v)
@@ -228,5 +255,5 @@ sayTracer = Tracer $ \v -> say (show v)
 -- >>> res
 res = do
   let resv = runSimTrace example
-  -- writeFile "simEvents.log" $ ppTrace resv
   writeFile "simEvents.log" $ unlines (selectTraceEventsSay resv)
+  appendFile "simEvents.log" $ ppTrace resv
