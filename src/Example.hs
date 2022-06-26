@@ -128,42 +128,65 @@ clientLowHandler name clientTracer chan ref channel = forever $ do
   sv <- atomically $ readTQueue chan
   clientHandler (contramap (WarpTracer name) clientTracer) sv ref channel
 
+data AppServerTracer = AppServerTracerCall String
+                     | AppServerTracerCast String
+                     | AppServerTracerGet
+                     | AppServerDelayFinish Time
+ deriving Show
+
 class HandleM a where
   handleM ::
     ( MonadSay n,
       MonadDelay n,
+      MonadMonotonicTime  n,
       MonadSTM n
     ) =>
+    Tracer n AppServerTracer ->
     a n ->
     n ()
 
 instance HandleM (SCall A Int Bool) where
-  handleM (SCall _ tmvar) = do
+  handleM appServerTracer (SCall i tmvar) = do
+    traceWith appServerTracer $ AppServerTracerCall (show i)
     threadDelay 0.1
+    ct <- getMonotonicTime
+    traceWith appServerTracer $ AppServerDelayFinish ct
     atomically $ putTMVar tmvar True
 
 instance HandleM (SCall B () String) where
-  handleM (SCall _ tmvar) = atomically $ putTMVar tmvar "well"
+  handleM appServerTracer (SCall i tmvar) = do
+    traceWith appServerTracer $ AppServerTracerCall (show i)
+    atomically $ putTMVar tmvar "well"
 
 instance HandleM (SCast C String) where
-  handleM (SCast s) = say $ "server recv msg: " ++ s
+  handleM appServerTracer (SCast s) = do
+    traceWith appServerTracer $ AppServerTracerCast (show s)
 
 instance HandleM (SGet D Int) where
-  handleM (SGet tmvar) = atomically $ putTMVar tmvar 10010
+  handleM appServerTracer (SGet tmvar) = do
+    traceWith appServerTracer AppServerTracerGet
+    atomically $ putTMVar tmvar 10010
 
 instance Show req => HandleM (SCall (E req) req Bool) where
-  handleM (SCall req tmvar) = do
-    say $ show req
+  handleM appServerTracer (SCall req tmvar) = do
+    traceWith appServerTracer $ AppServerTracerCall (show req)
     atomically $ putTMVar tmvar (show req == "\"admin\"")
 
 server
   :: forall req n
-   . (MonadSTM n, MonadSay n, MonadDelay n, Show req, Serialise req)
-  => TQueue n (Api req n)
+   . ( MonadSTM n
+     , MonadSay n
+     , MonadDelay n
+     , Show req
+     , Serialise req
+     , MonadMonotonicTime n
+     )
+  => Tracer n AppServerTracer
+  -> TQueue n (Api req n)
   -> n ()
-server tq = forever $ do
+server appServerTracer tq = forever $ do
   sv <- atomically $ readTQueue tq
-  apply @HandleM handleM sv
+  apply @HandleM (handleM appServerTracer) sv
 
 serverLowHandler
   :: (MonadSTM n, MonadTime n, MonadST n, Serialise req)
@@ -247,7 +270,8 @@ example = do
   serverChan <- newTQueueIO
   serverRef  <- newTVarIO Nothing
 
-  forkIO (void $ server @ExampleReq serverChan) >>= flip labelThread "server"
+  forkIO (void $ server @ExampleReq sayTracer serverChan)
+    >>= flip labelThread "server"
 
   let delayServerChannel = delayChannel 0.04 serverChannel
   forkIO
