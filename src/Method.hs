@@ -19,7 +19,7 @@
 module Method where
 
 import Codec.CBOR.Decoding
-import Codec.CBOR.Encoding
+import Codec.CBOR.Write (toBuilder)
 import Codec.Serialise
 import Control.Monad.Class.MonadST
 import Control.Monad.Class.MonadSTM
@@ -88,6 +88,7 @@ class
   sender ::
     Tracer n MethodTracer ->
     TVar n (Maybe LBS.ByteString) ->
+    Int ->
     a n ->
     Channel n LBS.ByteString ->
     n ()
@@ -108,10 +109,10 @@ instance
   ) =>
   SR n r (SCast a msg)
   where
-  sender methodTracer _ (SCast msg) Channel {send} = do
+  sender methodTracer _ index (SCast msg) Channel {send} = do
     ct <- getCurrentTime
     traceWith methodTracer $ CastSenderMsg ct
-    send $ convertCborEncoder encode msg
+    send $ toLazyByteString (toBuilder $ encode index) <> convertCborEncoder encode msg
 
   recver methodTracer ref chan channel = do
     lbs <- readTVarIO ref
@@ -134,7 +135,8 @@ instance
   ) =>
   SR n r (SGet a resp)
   where
-  sender methodTracer ref (SGet mvar) channel = do
+  sender methodTracer ref index (SGet mvar) channel@Channel {send} = do
+    send $ toLazyByteString (toBuilder $ encode index)
     lbs <- readTVarIO ref
     vdec <- convertCborDecoder decode
     ct <- getCurrentTime
@@ -150,7 +152,6 @@ instance
 
   recver methodTracer _ chan Channel {send} = do
     mvar <- newEmptyTMVarIO @n @resp
-
     ct <- getCurrentTime
     traceWith methodTracer $ GetRecverInjectChan ct
     atomically $ writeTQueue chan (inject (SGet @a mvar))
@@ -171,11 +172,11 @@ instance
   ) =>
   SR n r (SCall a req resp)
   where
-  sender methodTracer ref (SCall req tmvar) channel@Channel {send} = do
+  sender methodTracer ref index (SCall req tmvar) channel@Channel {send} = do
     lbs <- readTVarIO ref
     ct <- getCurrentTime
     traceWith methodTracer $ CallSenderSendReq ct
-    send $ convertCborEncoder encode req
+    send $ toLazyByteString (toBuilder $ encode index) <> convertCborEncoder encode req
     vdec <- convertCborDecoder decode
     val <- runDecoderWithChannel channel lbs vdec
     case val of
@@ -207,9 +208,8 @@ instance
         ct <- getCurrentTime
         traceWith methodTracer $ CallRecverSendRespBack ct
 
-data ClientTracer
-  = ClientSendIndex Int UTCTime
-  | ClientMethod MethodTracer
+newtype ClientTracer
+  =  ClientMethod MethodTracer
   deriving (Show)
 
 clientHandler ::
@@ -223,15 +223,13 @@ clientHandler ::
   TVar n (Maybe LBS.ByteString) ->
   Channel n LBS.ByteString ->
   n ()
-clientHandler clientTracer s@(Sum i _) ref channel@Channel {send} = do
-  ct <- getCurrentTime
-  traceWith clientTracer (ClientSendIndex i ct)
-  send $ convertCborEncoder encodeInt i
+clientHandler clientTracer s@(Sum i _) ref channel = do
   apply @(SR n r)
     ( \x ->
         sender @n @r
           (contramap ClientMethod clientTracer)
           ref
+          i
           x
           channel
     )
