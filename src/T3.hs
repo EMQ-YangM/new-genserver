@@ -27,11 +27,13 @@ import Control.Monad.Class.MonadFork
 import Control.Monad.Class.MonadST
 import Control.Monad.Class.MonadSTM
 import Control.Monad.Class.MonadSay
+import Control.Monad.Class.MonadTime
 import Control.Monad.Class.MonadTimer
 import Control.Monad.IOSim (ppTrace, runSimTrace, selectTraceEventsSay)
 import Control.Tracer
 import qualified Data.ByteString.Lazy as LBS
 import Data.Kind
+import Data.Time (UTCTime)
 import GHC.Base
 import GHC.TypeLits
 import S
@@ -137,19 +139,19 @@ newtype SCast a msg n = SCast msg
 data SCall a req resp n = SCall req (TMVar n resp)
 
 data MethodTracer
-  = CallSenderSendReq
-  | CallSenderRecvAndDecodeSuccess
-  | CallRecverRecvReqSuccess
-  | CallRecverInjectSCallToChan
-  | CallRecverRespFromUpLevelApp
-  | CallRecverSendRespBack
-  | CastSenderMsg
-  | CastRecverRecvMsgSuccess
-  | GetSenderRecvResponse
-  | GetSenderRecvResponseDecodeSuccess
-  | GetRecverInjectChan
-  | GetRecverGetUpLevelResp
-  | GetRecverSendRespBack
+  = CallSenderSendReq UTCTime
+  | CallSenderRecvAndDecodeSuccess UTCTime
+  | CallRecverRecvReqSuccess UTCTime
+  | CallRecverInjectSCallToChan UTCTime
+  | CallRecverRespFromUpLevelApp UTCTime
+  | CallRecverSendRespBack UTCTime
+  | CastSenderMsg UTCTime
+  | CastRecverRecvMsgSuccess UTCTime
+  | GetSenderRecvResponse UTCTime
+  | GetSenderRecvResponseDecodeSuccess UTCTime
+  | GetRecverInjectChan UTCTime
+  | GetRecverGetUpLevelResp UTCTime
+  | GetRecverSendRespBack UTCTime
   deriving (Show)
 
 class
@@ -175,13 +177,15 @@ class
 instance
   ( SCast a msg :< r,
     MonadST n,
+    MonadTime n,
     MonadSTM n,
     Serialise msg
   ) =>
   SR1 n r (SCast a msg)
   where
   sender methodTracer _ (SCast msg) Channel {send} = do
-    traceWith methodTracer CastSenderMsg
+    ct <- getCurrentTime
+    traceWith methodTracer $ CastSenderMsg ct
     send $ convertCborEncoder encode msg
 
   recver methodTracer ref chan channel = do
@@ -192,12 +196,14 @@ instance
       Left e -> error (show e)
       Right (v, jl) -> do
         atomically $ writeTVar ref jl
-        traceWith methodTracer CastRecverRecvMsgSuccess
+        ct <- getCurrentTime
+        traceWith methodTracer $ CastRecverRecvMsgSuccess ct
         atomically $ writeTQueue chan (inject (SCast @a v))
 
 instance
   ( SGet a resp :< r,
     MonadST n,
+    MonadTime n,
     MonadSTM n,
     Serialise resp
   ) =>
@@ -206,28 +212,35 @@ instance
   sender methodTracer ref (SGet mvar) channel = do
     lbs <- readTVarIO ref
     vdec <- convertCborDecoder decode
-    traceWith methodTracer GetSenderRecvResponse
+    ct <- getCurrentTime
+    traceWith methodTracer $ GetSenderRecvResponse ct
     val <- runDecoderWithChannel channel lbs vdec
     case val of
       Left e -> error (show e)
       Right (v, jl) -> do
-        traceWith methodTracer GetSenderRecvResponseDecodeSuccess
+        ct <- getCurrentTime
+        traceWith methodTracer $ GetSenderRecvResponseDecodeSuccess ct
         atomically $ writeTVar ref jl
         atomically $ putTMVar mvar v
 
   recver methodTracer _ chan Channel {send} = do
     mvar <- newEmptyTMVarIO @n @resp
-    traceWith methodTracer GetRecverInjectChan
+
+    ct <- getCurrentTime
+    traceWith methodTracer $ GetRecverInjectChan ct
     atomically $ writeTQueue chan (inject (SGet @a mvar))
     var <- atomically $ takeTMVar mvar
-    traceWith methodTracer GetRecverGetUpLevelResp
+    ct <- getCurrentTime
+    traceWith methodTracer $ GetRecverGetUpLevelResp ct
     send $ convertCborEncoder encode var
-    traceWith methodTracer GetRecverSendRespBack
+    ct <- getCurrentTime
+    traceWith methodTracer $ GetRecverSendRespBack ct
 
 instance
   ( SCall a req resp :< r,
     MonadSTM n,
     MonadST n,
+    MonadTime n,
     Serialise resp,
     Serialise req
   ) =>
@@ -235,7 +248,8 @@ instance
   where
   sender methodTracer ref (SCall req tmvar) channel@Channel {send} = do
     lbs <- readTVarIO ref
-    traceWith methodTracer CallSenderSendReq
+    ct <- getCurrentTime
+    traceWith methodTracer $ CallSenderSendReq ct
     send $ convertCborEncoder encode req
     vdec <- convertCborDecoder decode
     val <- runDecoderWithChannel channel lbs vdec
@@ -243,7 +257,8 @@ instance
       Left e -> error (show e)
       Right (v, jl) -> do
         atomically $ writeTVar ref jl
-        traceWith methodTracer CallSenderRecvAndDecodeSuccess
+        ct <- getCurrentTime
+        traceWith methodTracer $ CallSenderRecvAndDecodeSuccess ct
         atomically $ putTMVar tmvar v
 
   recver methodTracer ref chan channel@Channel {send} = do
@@ -253,24 +268,29 @@ instance
     case val of
       Left e -> error (show e)
       Right (v, jl) -> do
-        traceWith methodTracer CallRecverRecvReqSuccess
+        ct <- getCurrentTime
+        traceWith methodTracer $ CallRecverRecvReqSuccess ct
         atomically $ writeTVar ref jl
         mvar <- newEmptyTMVarIO @n @resp
-        traceWith methodTracer CallRecverInjectSCallToChan
+        ct <- getCurrentTime
+        traceWith methodTracer $ CallRecverInjectSCallToChan ct
         atomically $ writeTQueue chan (inject (SCall @a v mvar))
         var <- atomically $ takeTMVar mvar
-        traceWith methodTracer CallRecverRespFromUpLevelApp
+        ct <- getCurrentTime
+        traceWith methodTracer $ CallRecverRespFromUpLevelApp ct
         send $ convertCborEncoder encode var
-        traceWith methodTracer CallRecverSendRespBack
+        ct <- getCurrentTime
+        traceWith methodTracer $ CallRecverSendRespBack ct
 
 data ClientTracer
-  = ClientSendIndex Int
+  = ClientSendIndex Int UTCTime
   | ClientMethod MethodTracer
   deriving (Show)
 
 clientHandler ::
   forall n r.
   ( Apply (SR1 n r) r,
+    MonadTime n,
     MonadST n
   ) =>
   Tracer n ClientTracer ->
@@ -279,8 +299,9 @@ clientHandler ::
   Channel n LBS.ByteString ->
   n ()
 clientHandler clientTracer s@(Sum i _) ref channel@Channel {send} = do
+  ct <- getCurrentTime
+  traceWith clientTracer (ClientSendIndex i ct)
   send $ convertCborEncoder encodeInt i
-  traceWith clientTracer (ClientSendIndex i)
   apply @(SR1 n r)
     ( \x ->
         sender @n @r
@@ -292,13 +313,14 @@ clientHandler clientTracer s@(Sum i _) ref channel@Channel {send} = do
     s
 
 data ServerTracer
-  = ServerRecvIndexResult (Either DeserialiseFailure (Int, Maybe LBS.ByteString))
+  = ServerRecvIndexResult (Either DeserialiseFailure (Int, Maybe LBS.ByteString)) UTCTime
   | ServerMethod MethodTracer
   deriving (Show)
 
 serverHandler ::
   forall n r.
   ( Apply (SR1 n r) r,
+    MonadTime n,
     MonadSTM n,
     MonadST n
   ) =>
@@ -311,10 +333,11 @@ serverHandler serverTracer ref chan channel = do
   lbs <- readTVarIO ref
   vdec <- convertCborDecoder decodeInt
   val <- runDecoderWithChannel channel lbs vdec
-  traceWith serverTracer (ServerRecvIndexResult val)
   case val of
     Left e -> error (show e)
     Right (v, jl) -> do
+      ct <- getCurrentTime
+      traceWith serverTracer (ServerRecvIndexResult val ct)
       atomically $ writeTVar ref jl
       apply @(SR1 n r)
         ( \(_ :: k x) ->
@@ -362,7 +385,8 @@ client tq = do
   tv2 <- atomically $ takeTMVar tmvar2
   say $ "client recv val: " ++ show tv2
 
-  atomically $ writeTQueue tq (inject $ SCast @C "wellcome")
+  replicateM_ 3 $ do
+    atomically $ writeTQueue tq (inject $ SCast @C "wellcome")
 
   tmvar3 <- newEmptyTMVarIO @n @Int
   atomically $ writeTQueue tq (inject $ SGet @D tmvar3)
@@ -370,7 +394,10 @@ client tq = do
   say $ "client recv val: " ++ show tv3
 
 clientLowHandler ::
-  (MonadSTM n, MonadST n) =>
+  ( MonadSTM n,
+    MonadTime n,
+    MonadST n
+  ) =>
   Tracer n ClientTracer ->
   TQueue n (Api n) ->
   TVar n (Maybe LBS.ByteString) ->
@@ -381,10 +408,17 @@ clientLowHandler clientTracer chan ref channel = forever $ do
   clientHandler clientTracer sv ref channel
 
 class HandleM a where
-  handleM :: (MonadSay n, MonadSTM n) => a n -> n ()
+  handleM ::
+    ( MonadSay n,
+      MonadDelay n,
+      MonadSTM n
+    ) =>
+    a n ->
+    n ()
 
 instance HandleM (SCall A Int Bool) where
   handleM (SCall i tmvar) = do
+    threadDelay 0.1
     atomically $ putTMVar tmvar True
 
 instance HandleM (SCall B () String) where
@@ -399,7 +433,10 @@ instance HandleM (SGet D Int) where
     atomically $ putTMVar tmvar 10010
 
 server ::
-  (MonadSTM n, MonadSay n) =>
+  ( MonadSTM n,
+    MonadSay n,
+    MonadDelay n
+  ) =>
   TQueue n (Api n) ->
   n ()
 server tq = forever $ do
@@ -408,6 +445,7 @@ server tq = forever $ do
 
 serverLowHandler ::
   ( MonadSTM n,
+    MonadTime n,
     MonadST n
   ) =>
   Tracer n ServerTracer ->
@@ -424,11 +462,14 @@ example ::
     MonadFork n,
     MonadSay n,
     MonadDelay n,
-    MonadST n
+    MonadST n,
+    MonadTime n,
+    MonadTimer n
   ) =>
   n ()
 example = do
   (clientChannel, serverChannel) <- createConnectedChannels
+  -- (clientChannel, serverChannel) <- createConnectedBufferedChannels 10
   ------------------------------------
   clientChan <- newTQueueIO
   clientRef <- newTVarIO Nothing
@@ -440,9 +481,10 @@ example = do
   serverRef <- newTVarIO Nothing
   forkIO (void $ server serverChan)
     >>= flip labelThread "server"
-  forkIO (void $ serverLowHandler sayTracer serverChan serverRef serverChannel)
+  let delayServerChannel = delayChannel 0.04 serverChannel
+  forkIO (void $ serverLowHandler sayTracer serverChan serverRef delayServerChannel)
     >>= flip labelThread "server_low"
-  threadDelay 1
+  threadDelay 10
 
 sayTracer :: (MonadSay n, Show a) => Tracer n a
 sayTracer = Tracer $ \v -> say (show v)

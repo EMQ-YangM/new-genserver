@@ -29,6 +29,8 @@ import Codec.Serialise
 import Codec.Serialise.Encoding
 import Control.Monad.Class.MonadST
 import Control.Monad.Class.MonadSTM
+import Control.Monad.Class.MonadSay
+import Control.Monad.Class.MonadTimer
 import Control.Monad.IOSim
 import Control.Monad.ST
 import qualified Data.ByteString as BS
@@ -42,6 +44,69 @@ import Data.Maybe (isNothing)
 import GHC.TypeLits
 import N2
 import Test.QuickCheck (Arbitrary (arbitrary), Gen, frequency, generate, quickCheck)
+
+------------------------------------------------
+channelEffect ::
+  forall m a.
+  Monad m =>
+  -- | Action before 'send'
+  (a -> m ()) ->
+  -- | Action after 'recv'
+  (Maybe a -> m ()) ->
+  Channel m a ->
+  Channel m a
+channelEffect beforeSend afterRecv Channel {send, recv} =
+  Channel
+    { send = \x -> do
+        beforeSend x
+        send x,
+      recv = do
+        mx <- recv
+        afterRecv mx
+        return mx
+    }
+
+-- | Delay a channel on the receiver end.
+--
+-- This is intended for testing, as a crude approximation of network delays.
+-- More accurate models along these lines are of course possible.
+delayChannel ::
+  ( MonadSTM m,
+    MonadTimer m
+  ) =>
+  DiffTime ->
+  Channel m a ->
+  Channel m a
+delayChannel delay =
+  channelEffect
+    (\_ -> return ())
+    (\_ -> threadDelay delay)
+
+-- | Channel which logs sent and received messages.
+loggingChannel ::
+  ( MonadSay m,
+    Show id,
+    Show a
+  ) =>
+  id ->
+  Channel m a ->
+  Channel m a
+loggingChannel ident Channel {send, recv} =
+  Channel
+    { send = loggingSend,
+      recv = loggingRecv
+    }
+  where
+    loggingSend a = do
+      say (show ident ++ ":send:" ++ show a)
+      send a
+
+    loggingRecv = do
+      msg <- recv
+      case msg of
+        Nothing -> return ()
+        Just a -> say (show ident ++ ":recv:" ++ show a)
+      return msg
 
 ------------------------------------------------
 data Channel m a = Channel
@@ -90,6 +155,27 @@ createConnectedChannels = do
     ( mvarsAsChannel bufferB bufferA,
       mvarsAsChannel bufferA bufferB
     )
+
+createConnectedBufferedChannels ::
+  MonadSTM m =>
+  Natural ->
+  m (Channel m a, Channel m a)
+createConnectedBufferedChannels sz = do
+  -- Create two TBQueues to act as the channel buffers (one for each
+  -- direction) and use them to make both ends of a bidirectional channel
+  bufferA <- atomically $ newTBQueue sz
+  bufferB <- atomically $ newTBQueue sz
+
+  return
+    ( queuesAsChannel bufferB bufferA,
+      queuesAsChannel bufferA bufferB
+    )
+  where
+    queuesAsChannel bufferRead bufferWrite =
+      Channel {send, recv}
+      where
+        send x = atomically (writeTBQueue bufferWrite x)
+        recv = atomically (Just <$> readTBQueue bufferRead)
 
 {-# NOINLINE toLazyByteString #-}
 toLazyByteString :: BS.Builder -> LBS.ByteString

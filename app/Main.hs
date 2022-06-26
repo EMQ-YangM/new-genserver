@@ -1,6 +1,6 @@
 module Main where
 
-import T2
+import T3
 
 main :: IO ()
 main = do
