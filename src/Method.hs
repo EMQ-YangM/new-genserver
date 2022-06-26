@@ -4,7 +4,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LinearTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PolyKinds #-}
@@ -18,17 +17,17 @@
 
 module Method where
 
-import Codec.CBOR.Decoding
-import Codec.CBOR.Write (toBuilder)
-import Codec.Serialise
-import Control.Monad.Class.MonadST
-import Control.Monad.Class.MonadSTM
-import Control.Monad.Class.MonadTime
-import Control.Tracer
-import qualified Data.ByteString.Lazy as LBS
-import Data.Kind
-import Serialise
-import Sum
+import           Codec.CBOR.Decoding
+import           Codec.CBOR.Write               ( toBuilder )
+import           Codec.Serialise
+import           Control.Monad.Class.MonadST
+import           Control.Monad.Class.MonadSTM
+import           Control.Monad.Class.MonadTime
+import           Control.Tracer
+import qualified Data.ByteString.Lazy          as LBS
+import           Data.Kind
+import           Serialise
+import           Sum
 
 data Get resp
 
@@ -109,17 +108,19 @@ instance
   ) =>
   SR n r (SCast a msg)
   where
-  sender methodTracer _ index (SCast msg) Channel {send} = do
+  sender methodTracer _ index (SCast msg) Channel { send } = do
     ct <- getMonotonicTime
     traceWith methodTracer $ CastSenderMsg ct
-    send $ toLazyByteString (toBuilder $ encode index) <> convertCborEncoder encode msg
+    send
+      $  toLazyByteString (toBuilder $ encode index)
+      <> convertCborEncoder encode msg
 
   recver methodTracer ref chan channel = do
-    lbs <- readTVarIO ref
+    lbs  <- readTVarIO ref
     vdec <- convertCborDecoder (decode @msg)
-    val <- runDecoderWithChannel channel lbs vdec
+    val  <- runDecoderWithChannel channel lbs vdec
     case val of
-      Left e -> error (show e)
+      Left  e       -> error (show e)
       Right (v, jl) -> do
         atomically $ writeTVar ref jl
         ct <- getMonotonicTime
@@ -135,28 +136,28 @@ instance
   ) =>
   SR n r (SGet a resp)
   where
-  sender methodTracer ref index (SGet mvar) channel@Channel {send} = do
+  sender methodTracer ref index (SGet mvar) channel@Channel { send } = do
     send $ toLazyByteString (toBuilder $ encode index)
-    lbs <- readTVarIO ref
+    lbs  <- readTVarIO ref
     vdec <- convertCborDecoder decode
-    ct <- getMonotonicTime
+    ct   <- getMonotonicTime
     traceWith methodTracer $ GetSenderRecvResponse ct
     val <- runDecoderWithChannel channel lbs vdec
     case val of
-      Left e -> error (show e)
+      Left  e       -> error (show e)
       Right (v, jl) -> do
         ct <- getMonotonicTime
         traceWith methodTracer $ GetSenderRecvResponseDecodeSuccess ct
         atomically $ writeTVar ref jl
         atomically $ putTMVar mvar v
 
-  recver methodTracer _ chan Channel {send} = do
+  recver methodTracer _ chan Channel { send } = do
     mvar <- newEmptyTMVarIO @n @resp
-    ct <- getMonotonicTime
+    ct   <- getMonotonicTime
     traceWith methodTracer $ GetRecverInjectChan ct
     atomically $ writeTQueue chan (inject (SGet @a mvar))
     var <- atomically $ takeTMVar mvar
-    ct <- getMonotonicTime
+    ct  <- getMonotonicTime
     traceWith methodTracer $ GetRecverGetUpLevelResp ct
     send $ convertCborEncoder encode var
     ct <- getMonotonicTime
@@ -172,37 +173,39 @@ instance
   ) =>
   SR n r (SCall a req resp)
   where
-  sender methodTracer ref index (SCall req tmvar) channel@Channel {send} = do
+  sender methodTracer ref index (SCall req tmvar) channel@Channel { send } = do
     lbs <- readTVarIO ref
-    ct <- getMonotonicTime
+    ct  <- getMonotonicTime
     traceWith methodTracer $ CallSenderSendReq ct
-    send $ toLazyByteString (toBuilder $ encode index) <> convertCborEncoder encode req
+    send
+      $  toLazyByteString (toBuilder $ encode index)
+      <> convertCborEncoder encode req
     vdec <- convertCborDecoder decode
-    val <- runDecoderWithChannel channel lbs vdec
+    val  <- runDecoderWithChannel channel lbs vdec
     case val of
-      Left e -> error (show e)
+      Left  e       -> error (show e)
       Right (v, jl) -> do
         atomically $ writeTVar ref jl
         ct <- getMonotonicTime
         traceWith methodTracer $ CallSenderRecvAndDecodeSuccess ct
         atomically $ putTMVar tmvar v
 
-  recver methodTracer ref chan channel@Channel {send} = do
-    lbs <- readTVarIO ref
+  recver methodTracer ref chan channel@Channel { send } = do
+    lbs  <- readTVarIO ref
     vdec <- convertCborDecoder (decode @req)
-    val <- runDecoderWithChannel channel lbs vdec
+    val  <- runDecoderWithChannel channel lbs vdec
     case val of
-      Left e -> error (show e)
+      Left  e       -> error (show e)
       Right (v, jl) -> do
         ct <- getMonotonicTime
         traceWith methodTracer $ CallRecverRecvReqSuccess ct
         atomically $ writeTVar ref jl
         mvar <- newEmptyTMVarIO @n @resp
-        ct <- getMonotonicTime
+        ct   <- getMonotonicTime
         traceWith methodTracer $ CallRecverInjectSCallToChan ct
         atomically $ writeTQueue chan (inject (SCall @a v mvar))
         var <- atomically $ takeTMVar mvar
-        ct <- getMonotonicTime
+        ct  <- getMonotonicTime
         traceWith methodTracer $ CallRecverRespFromUpLevelApp ct
         send $ convertCborEncoder encode var
         ct <- getMonotonicTime
@@ -212,27 +215,17 @@ newtype ClientTracer
   = ClientMethod MethodTracer
   deriving (Show)
 
-clientHandler ::
-  forall n r.
-  ( Apply (SR n r) r,
-    MonadTime n,
-    MonadST n
-  ) =>
-  Tracer n ClientTracer ->
-  Sum r n ->
-  TVar n (Maybe LBS.ByteString) ->
-  Channel n LBS.ByteString ->
-  n ()
+clientHandler
+  :: forall n r
+   . (Apply (SR n r) r, MonadTime n, MonadST n)
+  => Tracer n ClientTracer
+  -> Sum r n
+  -> TVar n (Maybe LBS.ByteString)
+  -> Channel n LBS.ByteString
+  -> n ()
 clientHandler clientTracer s@(Sum i _) ref channel = do
   apply @(SR n r)
-    ( \x ->
-        sender @n @r
-          (contramap ClientMethod clientTracer)
-          ref
-          i
-          x
-          channel
-    )
+    (\x -> sender @n @r (contramap ClientMethod clientTracer) ref i x channel)
     s
 
 data ServerTracer
@@ -240,34 +233,28 @@ data ServerTracer
   | ServerMethod MethodTracer
   deriving (Show)
 
-serverHandler ::
-  forall n r.
-  ( Apply (SR n r) r,
-    MonadTime n,
-    MonadSTM n,
-    MonadST n
-  ) =>
-  Tracer n ServerTracer ->
-  TVar n (Maybe LBS.ByteString) ->
-  TQueue n (Sum r n) ->
-  Channel n LBS.ByteString ->
-  n ()
+serverHandler
+  :: forall n r
+   . (Apply (SR n r) r, MonadTime n, MonadSTM n, MonadST n)
+  => Tracer n ServerTracer
+  -> TVar n (Maybe LBS.ByteString)
+  -> TQueue n (Sum r n)
+  -> Channel n LBS.ByteString
+  -> n ()
 serverHandler serverTracer ref chan channel = do
-  lbs <- readTVarIO ref
+  lbs  <- readTVarIO ref
   vdec <- convertCborDecoder decodeInt
-  val <- runDecoderWithChannel channel lbs vdec
+  val  <- runDecoderWithChannel channel lbs vdec
   case val of
-    Left e -> error (show e)
+    Left  e       -> error (show e)
     Right (v, jl) -> do
       ct <- getMonotonicTime
       traceWith serverTracer (ServerRecvIndexResult val ct)
       atomically $ writeTVar ref jl
       apply @(SR n r)
-        ( \(_ :: k x) ->
-            recver @n @r @k
-              (contramap ServerMethod serverTracer)
-              ref
-              chan
-              channel
+        (\(_ :: k x) -> recver @n @r @k (contramap ServerMethod serverTracer)
+                                        ref
+                                        chan
+                                        channel
         )
         (Sum v undefined :: Sum r n)
