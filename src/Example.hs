@@ -207,8 +207,10 @@ example = do
   ------------------------------------
   clientChan <- newTQueueIO
   clientRef <- newTVarIO Nothing
-  forkIO (void $ client "admin" clientChan) >>= flip labelThread "client"
-  forkIO (void $ clientLowHandler sayTracer clientChan clientRef clientChannel)
+  forkIO (void $ client "admin" clientChan)
+    >>= flip labelThread "client"
+  let delayClientChannel = delayChannel 0.04 clientChannel
+  forkIO (void $ clientLowHandler sayTracer clientChan clientRef delayClientChannel)
     >>= flip labelThread "client_low"
   ------------------------------------
   serverChan <- newTQueueIO
@@ -226,5 +228,5 @@ sayTracer = Tracer $ \v -> say (show v)
 -- >>> res
 res = do
   let resv = runSimTrace example
-  writeFile "simEvents.log" $ ppTrace resv
-  appendFile "simEvents.log" $ "\n\n" ++ unlines (selectTraceEventsSay resv)
+  -- writeFile "simEvents.log" $ ppTrace resv
+  writeFile "simEvents.log" $ unlines (selectTraceEventsSay resv)

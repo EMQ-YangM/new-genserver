@@ -64,19 +64,19 @@ instance ShowT (Sum r) => Show (Sum r n) where
   show = showT
 
 data MethodTracer
-  = CallSenderSendReq UTCTime
-  | CallSenderRecvAndDecodeSuccess UTCTime
-  | CallRecverRecvReqSuccess UTCTime
-  | CallRecverInjectSCallToChan UTCTime
-  | CallRecverRespFromUpLevelApp UTCTime
-  | CallRecverSendRespBack UTCTime
-  | CastSenderMsg UTCTime
-  | CastRecverRecvMsgSuccess UTCTime
-  | GetSenderRecvResponse UTCTime
-  | GetSenderRecvResponseDecodeSuccess UTCTime
-  | GetRecverInjectChan UTCTime
-  | GetRecverGetUpLevelResp UTCTime
-  | GetRecverSendRespBack UTCTime
+  = CallSenderSendReq Time
+  | CallSenderRecvAndDecodeSuccess Time
+  | CallRecverRecvReqSuccess Time
+  | CallRecverInjectSCallToChan Time
+  | CallRecverRespFromUpLevelApp Time
+  | CallRecverSendRespBack Time
+  | CastSenderMsg Time
+  | CastRecverRecvMsgSuccess Time
+  | GetSenderRecvResponse Time
+  | GetSenderRecvResponseDecodeSuccess Time
+  | GetRecverInjectChan Time
+  | GetRecverGetUpLevelResp Time
+  | GetRecverSendRespBack Time
   deriving (Show)
 
 class
@@ -110,7 +110,7 @@ instance
   SR n r (SCast a msg)
   where
   sender methodTracer _ index (SCast msg) Channel {send} = do
-    ct <- getCurrentTime
+    ct <- getMonotonicTime
     traceWith methodTracer $ CastSenderMsg ct
     send $ toLazyByteString (toBuilder $ encode index) <> convertCborEncoder encode msg
 
@@ -122,7 +122,7 @@ instance
       Left e -> error (show e)
       Right (v, jl) -> do
         atomically $ writeTVar ref jl
-        ct <- getCurrentTime
+        ct <- getMonotonicTime
         traceWith methodTracer $ CastRecverRecvMsgSuccess ct
         atomically $ writeTQueue chan (inject (SCast @a v))
 
@@ -139,27 +139,27 @@ instance
     send $ toLazyByteString (toBuilder $ encode index)
     lbs <- readTVarIO ref
     vdec <- convertCborDecoder decode
-    ct <- getCurrentTime
+    ct <- getMonotonicTime
     traceWith methodTracer $ GetSenderRecvResponse ct
     val <- runDecoderWithChannel channel lbs vdec
     case val of
       Left e -> error (show e)
       Right (v, jl) -> do
-        ct <- getCurrentTime
+        ct <- getMonotonicTime
         traceWith methodTracer $ GetSenderRecvResponseDecodeSuccess ct
         atomically $ writeTVar ref jl
         atomically $ putTMVar mvar v
 
   recver methodTracer _ chan Channel {send} = do
     mvar <- newEmptyTMVarIO @n @resp
-    ct <- getCurrentTime
+    ct <- getMonotonicTime
     traceWith methodTracer $ GetRecverInjectChan ct
     atomically $ writeTQueue chan (inject (SGet @a mvar))
     var <- atomically $ takeTMVar mvar
-    ct <- getCurrentTime
+    ct <- getMonotonicTime
     traceWith methodTracer $ GetRecverGetUpLevelResp ct
     send $ convertCborEncoder encode var
-    ct <- getCurrentTime
+    ct <- getMonotonicTime
     traceWith methodTracer $ GetRecverSendRespBack ct
 
 instance
@@ -174,7 +174,7 @@ instance
   where
   sender methodTracer ref index (SCall req tmvar) channel@Channel {send} = do
     lbs <- readTVarIO ref
-    ct <- getCurrentTime
+    ct <- getMonotonicTime
     traceWith methodTracer $ CallSenderSendReq ct
     send $ toLazyByteString (toBuilder $ encode index) <> convertCborEncoder encode req
     vdec <- convertCborDecoder decode
@@ -183,7 +183,7 @@ instance
       Left e -> error (show e)
       Right (v, jl) -> do
         atomically $ writeTVar ref jl
-        ct <- getCurrentTime
+        ct <- getMonotonicTime
         traceWith methodTracer $ CallSenderRecvAndDecodeSuccess ct
         atomically $ putTMVar tmvar v
 
@@ -194,22 +194,22 @@ instance
     case val of
       Left e -> error (show e)
       Right (v, jl) -> do
-        ct <- getCurrentTime
+        ct <- getMonotonicTime
         traceWith methodTracer $ CallRecverRecvReqSuccess ct
         atomically $ writeTVar ref jl
         mvar <- newEmptyTMVarIO @n @resp
-        ct <- getCurrentTime
+        ct <- getMonotonicTime
         traceWith methodTracer $ CallRecverInjectSCallToChan ct
         atomically $ writeTQueue chan (inject (SCall @a v mvar))
         var <- atomically $ takeTMVar mvar
-        ct <- getCurrentTime
+        ct <- getMonotonicTime
         traceWith methodTracer $ CallRecverRespFromUpLevelApp ct
         send $ convertCborEncoder encode var
-        ct <- getCurrentTime
+        ct <- getMonotonicTime
         traceWith methodTracer $ CallRecverSendRespBack ct
 
 newtype ClientTracer
-  =  ClientMethod MethodTracer
+  = ClientMethod MethodTracer
   deriving (Show)
 
 clientHandler ::
@@ -236,7 +236,7 @@ clientHandler clientTracer s@(Sum i _) ref channel = do
     s
 
 data ServerTracer
-  = ServerRecvIndexResult (Either DeserialiseFailure (Int, Maybe LBS.ByteString)) UTCTime
+  = ServerRecvIndexResult (Either DeserialiseFailure (Int, Maybe LBS.ByteString)) Time
   | ServerMethod MethodTracer
   deriving (Show)
 
@@ -259,7 +259,7 @@ serverHandler serverTracer ref chan channel = do
   case val of
     Left e -> error (show e)
     Right (v, jl) -> do
-      ct <- getCurrentTime
+      ct <- getMonotonicTime
       traceWith serverTracer (ServerRecvIndexResult val ct)
       atomically $ writeTVar ref jl
       apply @(SR n r)
