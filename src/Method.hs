@@ -5,9 +5,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LinearTypes #-}
-{-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneKindSignatures #-}
@@ -15,108 +15,41 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 
-module T3 where
+module Method where
 
 import Codec.CBOR.Decoding
 import Codec.CBOR.Encoding
 import Codec.Serialise
-import Control.Monad
-import Control.Monad.Class.MonadFork
 import Control.Monad.Class.MonadST
 import Control.Monad.Class.MonadSTM
-import Control.Monad.Class.MonadSay
 import Control.Monad.Class.MonadTime
-import Control.Monad.Class.MonadTimer
-import Control.Monad.IOSim (ppTrace, runSimTrace, selectTraceEventsSay)
 import Control.Tracer
 import qualified Data.ByteString.Lazy as LBS
 import Data.Kind
-import Data.Time (UTCTime)
-import GHC.Base
-import GHC.TypeLits
-import S
-import Unsafe.Coerce (unsafeCoerce)
+import Serialise
+import Sum
 
-type Sum :: [(Type -> Type) -> Type] -> (Type -> Type) -> Type
-data Sum r n where
-  Sum :: Int -> t n -> Sum r n
+data Get resp
 
-type family
-  ElemIndex
-    (t :: (Type -> Type) -> Type)
-    (ts :: [(Type -> Type) -> Type]) ::
-    Nat
-  where
-  ElemIndex t0 ('(:) t0 _) = 0
-  ElemIndex t1 ('(:) t0 ('(:) t1 _)) = 1
-  ElemIndex t2 ('(:) t0 ('(:) t1 ('(:) t2 _))) = 2
-  ElemIndex t3 ('(:) t0 ('(:) t1 ('(:) t2 ('(:) t3 _)))) = 3
+data Cast msg
 
-type Element t r = KnownNat (ElemIndex t r)
+data Call req resp
 
-type t :< r = Element t r
+newtype SGet a resp n = SGet (TMVar n resp)
 
-newtype P (t :: (Type -> Type) -> Type) (r :: [(Type -> Type) -> Type]) = P {unP :: Int}
+type SCast :: Type -> Type -> (Type -> Type) -> Type
+newtype SCast a msg n = SCast msg
 
-elemNo :: forall t r. (t :< r) => P t r
-elemNo = P (fromIntegral (natVal' (proxy# :: Proxy# (ElemIndex t r))))
+data SCall a req resp n = SCall req (TMVar n resp)
 
-unsafeInject :: Int -> t n -> Sum r n
-unsafeInject = Sum
+type family K a where
+  K (a :: f -> b) = K1 b f
 
-inject :: forall e r n. (e :< r) => e n -> Sum r n
-inject = unsafeInject (unP (elemNo :: P e r))
-
-class
-  Apply
-    (c :: ((Type -> Type) -> Type) -> Constraint)
-    (fs :: [(Type -> Type) -> Type])
-  where
-  apply :: (forall g. c g => g n -> b) -> Sum fs n -> b
-
-instance constraint g0 => Apply constraint '[g0] where
-  apply f (Sum 0 r) = f (unsafeCoerce r :: g0 n)
-
-instance
-  ( constraint g0,
-    constraint g1
-  ) =>
-  Apply constraint '[g0, g1]
-  where
-  apply f (Sum 0 r) = f (unsafeCoerce r :: g0 n)
-  apply f (Sum 1 r) = f (unsafeCoerce r :: g1 n)
-
-instance
-  ( constraint g0,
-    constraint g1,
-    constraint g2
-  ) =>
-  Apply constraint '[g0, g1, g2]
-  where
-  apply f (Sum 0 r) = f (unsafeCoerce r :: g0 n)
-  apply f (Sum 1 r) = f (unsafeCoerce r :: g1 n)
-  apply f (Sum 2 r) = f (unsafeCoerce r :: g2 n)
-
-instance
-  ( constraint g0,
-    constraint g1,
-    constraint g2,
-    constraint g3
-  ) =>
-  Apply constraint '[g0, g1, g2, g3]
-  where
-  apply f (Sum 0 r) = f (unsafeCoerce r :: g0 n)
-  apply f (Sum 1 r) = f (unsafeCoerce r :: g1 n)
-  apply f (Sum 2 r) = f (unsafeCoerce r :: g2 n)
-  apply f (Sum 3 r) = f (unsafeCoerce r :: g3 n)
-
-class ShowT (v :: (Type -> Type) -> Type) where
-  showT :: v n -> String
-
-instance Apply ShowT r => ShowT (Sum r) where
-  showT s@(Sum i _) = "Sum " ++ show i ++ " " ++ apply @ShowT showT s
+type family K1 a b where
+  K1 b (Get resp) = SGet b resp
+  K1 b (Cast msg) = SCast b msg
+  K1 b (Call req resp) = SCall b req resp
 
 instance ShowT (SGet a resp) where
   showT (SGet _) = "SGet"
@@ -129,14 +62,6 @@ instance Show req => ShowT (SCall a req resp) where
 
 instance ShowT (Sum r) => Show (Sum r n) where
   show = showT
-
--------------------------------------------------
-newtype SGet a resp n = SGet (TMVar n resp)
-
-type SCast :: Type -> Type -> (Type -> Type) -> Type
-newtype SCast a msg n = SCast msg
-
-data SCall a req resp n = SCall req (TMVar n resp)
 
 data MethodTracer
   = CallSenderSendReq UTCTime
@@ -155,7 +80,7 @@ data MethodTracer
   deriving (Show)
 
 class
-  SR1
+  SR
     (n :: Type -> Type)
     (r :: [(Type -> Type) -> Type])
     (a :: (Type -> Type) -> Type)
@@ -181,7 +106,7 @@ instance
     MonadSTM n,
     Serialise msg
   ) =>
-  SR1 n r (SCast a msg)
+  SR n r (SCast a msg)
   where
   sender methodTracer _ (SCast msg) Channel {send} = do
     ct <- getCurrentTime
@@ -207,7 +132,7 @@ instance
     MonadSTM n,
     Serialise resp
   ) =>
-  SR1 n r (SGet a resp)
+  SR n r (SGet a resp)
   where
   sender methodTracer ref (SGet mvar) channel = do
     lbs <- readTVarIO ref
@@ -244,7 +169,7 @@ instance
     Serialise resp,
     Serialise req
   ) =>
-  SR1 n r (SCall a req resp)
+  SR n r (SCall a req resp)
   where
   sender methodTracer ref (SCall req tmvar) channel@Channel {send} = do
     lbs <- readTVarIO ref
@@ -289,7 +214,7 @@ data ClientTracer
 
 clientHandler ::
   forall n r.
-  ( Apply (SR1 n r) r,
+  ( Apply (SR n r) r,
     MonadTime n,
     MonadST n
   ) =>
@@ -302,7 +227,7 @@ clientHandler clientTracer s@(Sum i _) ref channel@Channel {send} = do
   ct <- getCurrentTime
   traceWith clientTracer (ClientSendIndex i ct)
   send $ convertCborEncoder encodeInt i
-  apply @(SR1 n r)
+  apply @(SR n r)
     ( \x ->
         sender @n @r
           (contramap ClientMethod clientTracer)
@@ -319,7 +244,7 @@ data ServerTracer
 
 serverHandler ::
   forall n r.
-  ( Apply (SR1 n r) r,
+  ( Apply (SR n r) r,
     MonadTime n,
     MonadSTM n,
     MonadST n
@@ -339,7 +264,7 @@ serverHandler serverTracer ref chan channel = do
       ct <- getCurrentTime
       traceWith serverTracer (ServerRecvIndexResult val ct)
       atomically $ writeTVar ref jl
-      apply @(SR1 n r)
+      apply @(SR n r)
         ( \(_ :: k x) ->
             recver @n @r @k
               (contramap ServerMethod serverTracer)
@@ -348,149 +273,3 @@ serverHandler serverTracer ref chan channel = do
               channel
         )
         (Sum v undefined :: Sum r n)
-
--------------------------------------------------
-data A
-
-data B
-
-data C
-
-data D
-
-type Api n =
-  Sum
-    '[ SCall A Int Bool,
-       SCall B () String,
-       SCast C String,
-       SGet D Int
-     ]
-    n
-
-client ::
-  forall n.
-  ( MonadSTM n,
-    MonadSay n
-  ) =>
-  TQueue n (Api n) ->
-  n ()
-client tq = do
-  tmvar1 <- newEmptyTMVarIO @n @String
-  atomically $ writeTQueue tq (inject $ SCall @B () tmvar1)
-  tv1 <- atomically $ takeTMVar tmvar1
-  say $ "client recv val: " ++ show tv1
-
-  tmvar2 <- newEmptyTMVarIO @n @Bool
-  atomically $ writeTQueue tq (inject $ SCall @A (1 :: Int) tmvar2)
-  tv2 <- atomically $ takeTMVar tmvar2
-  say $ "client recv val: " ++ show tv2
-
-  replicateM_ 3 $ do
-    atomically $ writeTQueue tq (inject $ SCast @C "wellcome")
-
-  tmvar3 <- newEmptyTMVarIO @n @Int
-  atomically $ writeTQueue tq (inject $ SGet @D tmvar3)
-  tv3 <- atomically $ takeTMVar tmvar3
-  say $ "client recv val: " ++ show tv3
-
-clientLowHandler ::
-  ( MonadSTM n,
-    MonadTime n,
-    MonadST n
-  ) =>
-  Tracer n ClientTracer ->
-  TQueue n (Api n) ->
-  TVar n (Maybe LBS.ByteString) ->
-  Channel n LBS.ByteString ->
-  n ()
-clientLowHandler clientTracer chan ref channel = forever $ do
-  sv <- atomically $ readTQueue chan
-  clientHandler clientTracer sv ref channel
-
-class HandleM a where
-  handleM ::
-    ( MonadSay n,
-      MonadDelay n,
-      MonadSTM n
-    ) =>
-    a n ->
-    n ()
-
-instance HandleM (SCall A Int Bool) where
-  handleM (SCall i tmvar) = do
-    threadDelay 0.1
-    atomically $ putTMVar tmvar True
-
-instance HandleM (SCall B () String) where
-  handleM (SCall i tmvar) = do
-    atomically $ putTMVar tmvar "well"
-
-instance HandleM (SCast C String) where
-  handleM (SCast s) = say $ "server recv msg: " ++ s
-
-instance HandleM (SGet D Int) where
-  handleM (SGet tmvar) = do
-    atomically $ putTMVar tmvar 10010
-
-server ::
-  ( MonadSTM n,
-    MonadSay n,
-    MonadDelay n
-  ) =>
-  TQueue n (Api n) ->
-  n ()
-server tq = forever $ do
-  sv <- atomically $ readTQueue tq
-  apply @HandleM handleM sv
-
-serverLowHandler ::
-  ( MonadSTM n,
-    MonadTime n,
-    MonadST n
-  ) =>
-  Tracer n ServerTracer ->
-  TQueue n (Api n) ->
-  TVar n (Maybe LBS.ByteString) ->
-  Channel n LBS.ByteString ->
-  n ()
-serverLowHandler serverTracer chan ref channel =
-  forever $
-    serverHandler serverTracer ref chan channel
-
-example ::
-  ( MonadSTM n,
-    MonadFork n,
-    MonadSay n,
-    MonadDelay n,
-    MonadST n,
-    MonadTime n,
-    MonadTimer n
-  ) =>
-  n ()
-example = do
-  (clientChannel, serverChannel) <- createConnectedChannels
-  -- (clientChannel, serverChannel) <- createConnectedBufferedChannels 10
-  ------------------------------------
-  clientChan <- newTQueueIO
-  clientRef <- newTVarIO Nothing
-  forkIO (void $ client clientChan) >>= flip labelThread "client"
-  forkIO (void $ clientLowHandler sayTracer clientChan clientRef clientChannel)
-    >>= flip labelThread "client_low"
-  ------------------------------------
-  serverChan <- newTQueueIO
-  serverRef <- newTVarIO Nothing
-  forkIO (void $ server serverChan)
-    >>= flip labelThread "server"
-  let delayServerChannel = delayChannel 0.04 serverChannel
-  forkIO (void $ serverLowHandler sayTracer serverChan serverRef delayServerChannel)
-    >>= flip labelThread "server_low"
-  threadDelay 10
-
-sayTracer :: (MonadSay n, Show a) => Tracer n a
-sayTracer = Tracer $ \v -> say (show v)
-
--- >>> res
-res = do
-  let resv = runSimTrace example
-  writeFile "simEvents.log" $ ppTrace resv
-  appendFile "simEvents.log" $ "\n\n" ++ unlines (selectTraceEventsSay resv)

@@ -22,14 +22,11 @@ maintainer:         yangm@emqx.io
 extra-source-files: CHANGELOG.md
 
 library
-    exposed-modules: T
-                   , N
-                   , T1
-                   , T2
-                   , T3
-                   , N1
-                   , N2
-                   , S
+    exposed-modules: Method
+                   , Serialise
+                   , Templates
+                   , Sum
+                   , Example
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -49,6 +46,7 @@ library
                  , time
                  , QuickCheck
                  , contra-tracer
+                 , template-haskell
     hs-source-dirs:   src
     default-language: Haskell2010
     ghc-options: -W
