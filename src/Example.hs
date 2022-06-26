@@ -182,6 +182,9 @@ data ExampleReq = ExampleReq
 eReq :: ExampleReq
 eReq = ExampleReq { title = "aaa", position = "bbb", va = 10, vb = 0.01 }
 
+eReq1 :: ExampleReq
+eReq1 = ExampleReq { title = "---", position = "+++", va = 20, vb = 0.02 }
+
 example
   :: forall n
    . ( MonadSTM n
@@ -194,19 +197,38 @@ example
      )
   => n ()
 example = do
+
+  (clientChannel1, serverChannel1) <- createConnectedChannels
+  -- (clientChannel, serverChannel) <- createConnectedBufferedChannels 10
+  ------------------------------------
+  clientChan                       <- newTQueueIO
+  clientRef                        <- newTVarIO Nothing
+
+  forkIO (void $ client eReq1 clientChan) >>= flip labelThread "client_1"
+
+  let delayClientChannel = delayChannel 0.04 clientChannel1
+  forkIO
+      (void $ do
+        threadDelay 0.3
+        clientLowHandler sayTracer clientChan clientRef delayClientChannel
+      )
+    >>= flip labelThread "client_low_1"
+
+  ------------------------------------
+
   (clientChannel, serverChannel) <- createConnectedChannels
   -- (clientChannel, serverChannel) <- createConnectedBufferedChannels 10
   ------------------------------------
   clientChan                     <- newTQueueIO
   clientRef                      <- newTVarIO Nothing
 
-  forkIO (void $ client eReq clientChan) >>= flip labelThread "client"
+  forkIO (void $ client eReq clientChan) >>= flip labelThread "client_0"
 
   let delayClientChannel = delayChannel 0.04 clientChannel
   forkIO
       (void $ clientLowHandler sayTracer clientChan clientRef delayClientChannel
       )
-    >>= flip labelThread "client_low"
+    >>= flip labelThread "client_low_0"
 
   ------------------------------------
   serverChan <- newTQueueIO
@@ -218,7 +240,16 @@ example = do
   forkIO
       (void $ serverLowHandler sayTracer serverChan serverRef delayServerChannel
       )
-    >>= flip labelThread "server_low"
+    >>= flip labelThread "server_low_0"
+
+  serverRef <- newTVarIO Nothing
+  let delayServerChannel1 = delayChannel 0.04 serverChannel1
+  forkIO
+      ( void
+      $ serverLowHandler sayTracer serverChan serverRef delayServerChannel1
+      )
+    >>= flip labelThread "server_low_1"
+
 
   threadDelay 2
 
