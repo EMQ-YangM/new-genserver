@@ -39,12 +39,15 @@ newtype P (t :: (Type -> Type) -> Type) (r :: [(Type -> Type) -> Type]) = P {unP
 
 elemNo :: forall t r. (t :< r) => P t r
 elemNo = P (fromIntegral (natVal' (proxy# :: Proxy# (ElemIndex t r))))
+{-# INLINE elemNo #-}
 
 unsafeInject :: Int -> t n -> Sum r n
 unsafeInject = Sum
+{-# INLINE unsafeInject #-}
 
 inject :: forall e r n. (e :< r) => e n -> Sum r n
 inject = unsafeInject (unP (elemNo :: P e r))
+{-# INLINE inject #-}
 
 class
   Apply

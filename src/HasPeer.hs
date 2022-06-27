@@ -36,6 +36,7 @@ import Data.Kind
 import Data.Map (Map)
 import qualified Data.Map as Map
 import GHC.TypeLits
+import qualified HasServer as HS
 import Method
 import Sum
 import System.Random (mkStdGen)
@@ -76,6 +77,7 @@ getSelfNodeID ::
   ) =>
   m NodeID
 getSelfNodeID = sendLabelled @s RGetSelfNodeID
+{-# INLINE getSelfNodeID #-}
 
 getSelfQueue ::
   forall (s :: Symbol) n ms sig m.
@@ -83,6 +85,7 @@ getSelfQueue ::
   ) =>
   m (TQueue n (Sum ms n))
 getSelfQueue = sendLabelled @s RGetSelfQueue
+{-# INLINE getSelfQueue #-}
 
 getAll ::
   forall (s :: Symbol) n ms sig m resp t.
@@ -92,6 +95,7 @@ getAll ::
   (Get resp -> t) ->
   m [(NodeID, TMVar n resp)]
 getAll t = sendLabelled @s (RGetAll t)
+{-# INLINE getAll #-}
 
 callAll ::
   forall (s :: Symbol) n ms sig m req resp t.
@@ -102,6 +106,7 @@ callAll ::
   req ->
   m [(NodeID, TMVar n resp)]
 callAll t req = sendLabelled @s (RCallAll t req)
+{-# INLINE callAll #-}
 
 castAll ::
   forall (s :: Symbol) n ms sig m msg t.
@@ -112,6 +117,7 @@ castAll ::
   msg ->
   m ()
 castAll t msg = sendLabelled @s (RCastAll t msg)
+{-# INLINE castAll #-}
 
 call ::
   forall (s :: Symbol) n ms sig m req resp t.
@@ -123,6 +129,7 @@ call ::
   req ->
   m resp
 call nid t req = sendLabelled @s (RCall nid t req)
+{-# INLINE call #-}
 
 cast ::
   forall (s :: Symbol) n ms sig m msg t.
@@ -134,6 +141,7 @@ cast ::
   msg ->
   m ()
 cast nid t msg = sendLabelled @s (RCast nid t msg)
+{-# INLINE cast #-}
 
 get ::
   forall (s :: Symbol) n ms sig m resp t.
@@ -144,6 +152,7 @@ get ::
   (Get resp -> t) ->
   m resp
 get nid t = sendLabelled @s (RGet nid t)
+{-# INLINE get #-}
 
 newtype PeerC n ms m a = PeerC {unPeerC :: StateC (PeerState n ms) m a}
   deriving (Functor, Applicative, Monad, MonadIO)
@@ -200,6 +209,7 @@ instance
     L (RGetSelfNodeID) -> StateC $ \k ps@PeerState {nodeID} ->
       k ps (nodeID <$ ctx)
     R signa -> alg (unPeerC . hdl) (R signa) ctx
+  {-# INLINE alg #-}
 
 runWithPeers ::
   forall (name :: Symbol) m n ms a.
@@ -208,8 +218,57 @@ runWithPeers ::
   Labelled name (PeerC n ms) m a ->
   m (PeerState n ms, a)
 runWithPeers ps = runState (curry pure) ps . unPeerC . runLabelled
+{-# INLINE runWithPeers #-}
 
 ------------- example
+
+----- counter server
+
+data AddCounter where
+  AddCounter :: Cast () -> AddCounter
+
+data GetCounter where
+  GetCounter :: Get Int -> GetCounter
+
+type CounterApi = '[K 'AddCounter, K 'GetCounter]
+
+class CHandler n a where
+  chandler :: (Has (State Int) sig m, Has (Lift n) sig m, MonadSTM n) => a n -> m ()
+
+instance CHandler n (SCast AddCounter ()) where
+  chandler (SCast _) = modify @Int (+ 1)
+
+instance CHandler n (SGet GetCounter Int) where
+  chandler (SGet tmvar) = do
+    i <- S.get
+    S.put (0 :: Int)
+    sendM @n $ atomically $ putTMVar tmvar i
+
+counterServer ::
+  forall n sig m.
+  ( Has (State Int) sig m,
+    Has (Lift n) sig m,
+    MonadSTM n
+  ) =>
+  TQueue n (Sum CounterApi n) ->
+  m ()
+counterServer tq = forever $ do
+  sv <- sendM @n $ atomically $ readTQueue tq
+  apply @(CHandler n) chandler sv
+
+counterClient ::
+  forall n sig m.
+  ( HS.HasServer "c" CounterApi '[GetCounter] n sig m,
+    MonadDelay n,
+    MonadSay n
+  ) =>
+  m ()
+counterClient = forever $ do
+  sendM @n $ threadDelay 1
+  i <- HS.get @"c" GetCounter
+  sendM @n $ say $ show i
+
+-------------------------------------------------------------
 
 data Role = Master | Slave deriving (Show)
 
@@ -224,6 +283,7 @@ type Api = '[K 'ChangeMaster, K 'GetMsg]
 t1 ::
   forall n sig m.
   ( Has (S.State Role :+: Random :+: Reader (TVar n Int)) sig m,
+    HS.HasServer "c" CounterApi '[AddCounter] n sig m,
     HasPeer "m" Api n sig m,
     MonadTime n,
     MonadDelay n,
@@ -249,6 +309,7 @@ t1 = forever $ do
 class HandlerM n a where
   handlerM ::
     ( Has (S.State Role :+: Random :+: Reader (TVar n Int)) sig m,
+      HS.HasServer "c" CounterApi '[AddCounter] n sig m,
       MonadSTM n,
       MonadDelay n,
       MonadTime n,
@@ -261,15 +322,16 @@ class HandlerM n a where
 instance HandlerM n (SGet ChangeMaster ()) where
   handlerM (SGet tmvar) = do
     put Master
-    ctv <- ask @(TVar n Int)
+    HS.cast @"c" AddCounter ()
     sendM @n $ do
-      atomically $ modifyTVar' ctv (+ 1)
       atomically $ putTMVar tmvar ()
+  {-# INLINE handlerM #-}
 
 instance HandlerM n (SGet GetMsg Int) where
   handlerM (SGet tmvar) = do
     i <- uniformR (1, 100000)
     sendM @n $ atomically $ putTMVar tmvar i
+  {-# INLINE handlerM #-}
 
 r0 ::
   forall n.
@@ -282,6 +344,10 @@ r0 ::
   ) =>
   n ()
 r0 = do
+  counterChan <- newTQueueIO @_ @(Sum CounterApi n)
+
+  forkIO $ void $ S.runState @Int 0 $ counterServer counterChan
+
   nodes <- forM [1 .. 4] $ \i -> do
     tc <- newTQueueIO @_ @(Sum Api n)
     pure (NodeID i, tc)
@@ -292,16 +358,20 @@ r0 = do
   counterTVar <- newTVarIO @_ @Int 0
   case res of
     (h : hs) -> do
-      forkIO $ void $ runWithPeers @"m" h $ runRandom (mkStdGen 1) $ S.runState Master $ runReader counterTVar t1
+      forkIO $
+        void $
+          runWithPeers @"m" h $
+            HS.runWithServer @"c" counterChan $
+              runRandom (mkStdGen 1) $ S.runState Master $ runReader counterTVar t1
       forM_ (zip [10 ..] hs) $ \(i, h') -> do
-        forkIO $ void $ runWithPeers @"m" h' $ runRandom (mkStdGen (i * 100)) $ S.runState Slave $ runReader counterTVar t1
+        forkIO $
+          void $
+            runWithPeers @"m" h' $
+              HS.runWithServer @"c" counterChan $
+                runRandom (mkStdGen (i * 100)) $ S.runState Slave $ runReader counterTVar t1
     _ -> error "nice"
 
-  forever $ do
-    threadDelay 1
-    tv <- atomically $ readTVar counterTVar
-    atomically $ writeTVar counterTVar 0
-    say (show tv)
+  void $ HS.runWithServer @"c" counterChan counterClient
 
 -- >>> res
 res = writeFile "peer.log" $ unlines $ selectTraceEventsSay $ runSimTrace r0
