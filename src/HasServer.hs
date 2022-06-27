@@ -182,32 +182,38 @@ client = do
     tmvar <- ask
     sendM @n $ atomically $ putTMVar tmvar True
 
-class HandleM a where
-    handleM :: (MonadSTM n, MonadSay n) => a n -> n ()
+class HandleM n a where
+    handleM :: (MonadSTM n, MonadSay n, Has (Lift n) sig m, Has (Reader Int) sig m) => a n -> m ()
 
-instance HandleM (SCall A Int String) where
-    handleM (SCall _ tmvar) = do
+instance HandleM n (SCall A Int String) where
+    handleM (SCall _ tmvar) = sendM @n $ do
         atomically $ putTMVar tmvar "hello"
 
-instance HandleM (SCast B String) where
-    handleM (SCast msg) = say msg
+instance HandleM n (SCast B String) where
+    handleM (SCast msg) = do
+        i <- ask @Int
+        sendM @n $ say (show i ++ msg)
 
-instance HandleM (SGet C Int) where
-    handleM (SGet mvar) = do
+instance HandleM n (SGet C Int) where
+    handleM (SGet mvar) = sendM @n $ do
         atomically $ putTMVar mvar 10
 
-instance HandleM (SGet D Int) where
-    handleM (SGet mvar) = do
+instance HandleM n (SGet D Int) where
+    handleM (SGet mvar) = sendM @n $ do
         atomically $ putTMVar mvar 11
 
 instance Algebra (Lift (IOSim s)) (IOSim s) where
     alg hdl (LiftWith with) = with hdl
     {-# INLINE alg #-}
 
-server :: (MonadSTM n, MonadSay n) => TQueue n (Sum Api n) -> n ()
+server
+    :: forall n m sig
+     . (MonadSTM n, MonadSay n, Has (Lift n) sig m, Has (Reader Int) sig m)
+    => TQueue n (Sum Api n)
+    -> m ()
 server tq = forever $ do
-    tv <- atomically $ readTQueue tq
-    apply @HandleM handleM tv
+    tv <- sendM @n $ atomically $ readTQueue tq
+    apply @(HandleM n) handleM tv
 
 example
     :: forall n
@@ -216,11 +222,14 @@ example
 example = do
     tq    <- newTQueueIO
     tmvar <- newEmptyTMVarIO @_ @Bool
-    forkIO . void $ server tq
+
+    forkIO . void $ runReader @Int 1 $ server @n tq
+
     forkIO $ void $ runWithServer @"f" tq $ runReader tmvar client
+
     atomically $ takeTMVar tmvar
     pure ()
 
 -- >>> runExample
--- ["hello1011"]
+-- ["1hello1011"]
 runExample = selectTraceEventsSay $ runSimTrace example
