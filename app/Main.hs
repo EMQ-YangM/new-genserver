@@ -1,7 +1,7 @@
 module Main where
 
-import Example
+import HasPeer
 
 main :: IO ()
 main = do
-  example
+  r0

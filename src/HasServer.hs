@@ -32,48 +32,11 @@ import           Data.Kind
 import           GHC.TypeLits
 import           Method
 import           Sum
-
-
-
-type family Elem (name :: Symbol) (t :: Type) (ts :: [Type]) :: Constraint where
-  Elem name t '[] =
-    TypeError
-      ( 'Text "server "
-          :<>: 'ShowType name
-          ':<>: 'Text " not add "
-          :<>: 'ShowType t
-          :<>: 'Text " to it method list"
-      )
-  Elem name t (t ': xs) = ()
-  Elem name t (t1 ': xs) = Elem name t xs
-
-type family Elem0 (name :: Symbol) (t :: Type) (ts :: [Type]) :: Constraint where
-  Elem0 name t '[] =
-    TypeError
-      ( 'Text "server "
-          :<>: 'ShowType name
-          ':<>: 'Text " not support method "
-          :<>: 'ShowType t
-      )
-  Elem0 name t (t ': xs) = ()
-  Elem0 name t (t1 ': xs) = Elem0 name t xs
-
-type family InCon (name :: Symbol) (vs :: [Type]) (ts :: [Type]) :: Constraint where
-    InCon name '[] ts = ()
-    InCon name (v ': vs) ts = (Elem0 name v ts, InCon name vs ts)
-
-type family CT a where
-  CT (SGet b resp) = b
-  CT (SCast b msg) = b
-  CT (SCall b req resp) = b
-
-type family Map (ls :: [(Type -> Type) -> Type]) :: [Type] where
-    Map '[] = '[]
-    Map (x ': xs) = CT x ': Map xs
+import Type
 
 type HasServer (serverName :: Symbol) api allowMethod n sig m
     = ( HasLabelled serverName (Request n api allowMethod) sig m
-      , InCon serverName allowMethod (Map api)
+      , InCon serverName allowMethod (AllReq api)
       , Has (Lift n) sig m
       )
 
@@ -201,10 +164,6 @@ instance HandleM n (SGet C Int) where
 instance HandleM n (SGet D Int) where
     handleM (SGet mvar) = sendM @n $ do
         atomically $ putTMVar mvar 11
-
-instance Algebra (Lift (IOSim s)) (IOSim s) where
-    alg hdl (LiftWith with) = with hdl
-    {-# INLINE alg #-}
 
 server
     :: forall n m sig
