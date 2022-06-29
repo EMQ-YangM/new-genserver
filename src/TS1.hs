@@ -17,12 +17,14 @@ module TS1 where
 
 import Control.Algebra hiding (R)
 import Control.Carrier.Lift
+import Control.Carrier.Random.Gen
 import Control.Carrier.State.Strict
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
 import Data.Kind
 import Sum1
+import System.Random (mkStdGen)
 import Unsafe.Coerce (unsafeCoerce)
 
 data Call req resp
@@ -134,11 +136,15 @@ data R = R
 
 type Api a = [K 'A, K 'B, K 'C, K ('D @a)]
 
-handler :: (Has (State Int) sig m, Show a) => HList (TMAP (Api a) m)
+handler :: (Has (State Int :+: Random) sig m, Show a) => HList (TMAP (Api a) m)
 handler =
   (\(Req i) -> modify (+ i) >> pure (Resp (i == 1)))
     :| (\(Req i) -> pure (Resp $ "respon: " ++ show i))
-    :| (\(Req i) -> modify (+ r1 i) >> (Resp <$> get))
+    :| ( \(Req i) -> do
+           modify (+ r1 i)
+           rv <- uniformR (100, 10000)
+           Resp . (+ rv) <$> get
+       )
     :| (\(Req a) -> pure (Resp 1))
     :| HNil
 
@@ -164,15 +170,17 @@ val :: IO ()
 val = do
   chan <- newChan @(Sum (TReq (Api Int)), MVar (Sum (TResp (Api Int))))
 
-  forkIO $
-    void $
-      runState @Int 0 $
-        forever $ do
-          (vc, mv) <- liftIO $ readChan chan
-          liftIO $ print $ "recv call " ++ show vc
-          res <- callHandlers @(Api Int) handler vc
-          liftIO $ threadDelay 1000000
-          liftIO $ putMVar mv res
+  forkIO
+    . void
+    . runState @Int 0
+    . runRandom (mkStdGen 10)
+    . forever
+    $ do
+      (vc, mv) <- liftIO $ readChan chan
+      liftIO $ print $ "recv call " ++ show vc
+      res <- callHandlers @(Api Int) handler vc
+      liftIO $ threadDelay 100000
+      liftIO $ putMVar mv res
 
   mvar <- newEmptyMVar @(Sum (TResp (Api Int)))
   n <- call chan mvar C (R 1 False "nice")
