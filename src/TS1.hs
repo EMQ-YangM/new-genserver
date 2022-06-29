@@ -56,45 +56,45 @@ data HList (ts :: [Type]) where
 infixr 4 :|
 
 -------------------------------------
-class CallHandlers (r :: [Type]) m where
-  callHandlers :: HList (TMAP r m) -> Sum (TReq r) -> m (Sum (TResp r))
+class HandleCall (r :: [Type]) m where
+  handleCall :: HList (TMAP r m) -> Sum (TReq r) -> m (Sum (TResp r))
 
 instance
   (Functor m) =>
-  CallHandlers
+  HandleCall
     '[ SCall t0 req0 resp0
      ]
     m
   where
-  callHandlers (f0 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  handleCall (f0 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
 
 instance
   (Functor m) =>
-  CallHandlers
+  HandleCall
     '[ SCall t0 req0 resp0,
        SCall t1 req1 resp1
      ]
     m
   where
-  callHandlers (f0 :| f1 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
-  callHandlers (f0 :| f1 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
+  handleCall (f0 :| f1 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  handleCall (f0 :| f1 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
 
 instance
   (Functor m) =>
-  CallHandlers
+  HandleCall
     '[ SCall t0 req0 resp0,
        SCall t1 req1 resp1,
        SCall t2 req2 resp2
      ]
     m
   where
-  callHandlers (f0 :| f1 :| f2 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
-  callHandlers (f0 :| f1 :| f2 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
-  callHandlers (f0 :| f1 :| f2 :| HNil) (Sum 2 a) = Sum 2 <$> f2 (unsafeCoerce a :: Req t2 req2)
+  handleCall (f0 :| f1 :| f2 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  handleCall (f0 :| f1 :| f2 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
+  handleCall (f0 :| f1 :| f2 :| HNil) (Sum 2 a) = Sum 2 <$> f2 (unsafeCoerce a :: Req t2 req2)
 
 instance
   (Functor m) =>
-  CallHandlers
+  HandleCall
     '[ SCall t0 req0 resp0,
        SCall t1 req1 resp1,
        SCall t2 req2 resp2,
@@ -102,10 +102,10 @@ instance
      ]
     m
   where
-  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
-  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
-  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 2 a) = Sum 2 <$> f2 (unsafeCoerce a :: Req t2 req2)
-  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 3 a) = Sum 3 <$> f3 (unsafeCoerce a :: Req t3 req3)
+  handleCall (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  handleCall (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
+  handleCall (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 2 a) = Sum 2 <$> f2 (unsafeCoerce a :: Req t2 req2)
+  handleCall (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 3 a) = Sum 3 <$> f3 (unsafeCoerce a :: Req t3 req3)
 
 -------------------------------------
 type family K a where
@@ -178,7 +178,7 @@ val = do
     $ do
       (vc, mv) <- liftIO $ readChan chan
       liftIO $ print $ "recv call " ++ show vc
-      res <- callHandlers @(Api Int) handler vc
+      res <- handleCall @(Api Int) handler vc
       liftIO $ threadDelay 100000
       liftIO $ putMVar mv res
 
