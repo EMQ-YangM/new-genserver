@@ -26,10 +26,17 @@ library
                    , Serialise
                    , Templates
                    , Sum
+                   , Templates1
+                   , Sum1
                    , Example
                    , HasServer
                    , HasPeer
                    , Type
+                   , T
+                   , TS
+                   , TS1
+                   , T1
+                   , T2
 
     -- Modules included in this library but not exported.
     -- other-modules:
@@ -53,9 +60,13 @@ library
                  , template-haskell
                  , containers
                  , random
+                 , stm
     hs-source-dirs:   src
     default-language: Haskell2010
-    -- ghc-options: -W -fspecialise-aggressively -O2
+    -- ghc-options:        "-with-rtsopts=-T -I0 -A16m -N2 --disable-delayed-os-memory-return"
+
+    -- ghc-options: -O3
+    -- ghc-options: -W -fexpose-all-unfoldings -fspecialise-aggressively -O2
 
 executable new-genserver
     main-is:          Main.hs
@@ -71,4 +82,4 @@ executable new-genserver
 
     hs-source-dirs:   app
     default-language: Haskell2010
-    -- ghc-options: -W -fspecialise-aggressively -O2
+    ghc-options: -threaded

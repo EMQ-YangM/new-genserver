@@ -204,9 +204,9 @@ instance
         atomically $ writeTQueue tq (inject $ SGet @t @resp tmvar)
         pure (idx, tmvar)
       k ps (pars <$ ctx)
-    L (RGetSelfQueue) -> StateC $ \k ps@PeerState {nodeQueue} ->
+    L RGetSelfQueue -> StateC $ \k ps@PeerState {nodeQueue} ->
       k ps (nodeQueue <$ ctx)
-    L (RGetSelfNodeID) -> StateC $ \k ps@PeerState {nodeID} ->
+    L RGetSelfNodeID -> StateC $ \k ps@PeerState {nodeID} ->
       k ps (nodeID <$ ctx)
     R signa -> alg (unPeerC . hdl) (R signa) ctx
   {-# INLINE alg #-}
@@ -368,7 +368,7 @@ r0 = do
           void $
             runWithPeers @"m" h' $
               HS.runWithServer @"c" counterChan $
-                runRandom (mkStdGen (i * 100)) $ S.runState Slave $ runReader counterTVar t1
+                runRandom (mkStdGen (2)) $ S.runState Slave $ runReader counterTVar t1
     _ -> error "nice"
 
   void $ HS.runWithServer @"c" counterChan counterClient
