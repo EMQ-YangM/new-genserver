@@ -15,6 +15,9 @@
 
 module TS1 where
 
+import Control.Algebra hiding (R)
+import Control.Carrier.Lift
+import Control.Carrier.State.Strict
 import Control.Concurrent
 import Control.Monad
 import Control.Monad.IO.Class
@@ -51,28 +54,56 @@ data HList (ts :: [Type]) where
 infixr 4 :|
 
 -------------------------------------
-class CallHandles (r :: [Type]) m where
-  callHandler :: HList (TMAP r m) -> Sum (TReq r) -> m (Sum (TResp r))
+class CallHandlers (r :: [Type]) m where
+  callHandlers :: HList (TMAP r m) -> Sum (TReq r) -> m (Sum (TResp r))
 
 instance
   (Functor m) =>
-  CallHandles
+  CallHandlers
     '[ SCall t0 req0 resp0
      ]
     m
   where
-  callHandler (f0 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  callHandlers (f0 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
 
 instance
   (Functor m) =>
-  CallHandles
+  CallHandlers
     '[ SCall t0 req0 resp0,
        SCall t1 req1 resp1
      ]
     m
   where
-  callHandler (f0 :| f1 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
-  callHandler (f0 :| f1 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
+  callHandlers (f0 :| f1 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  callHandlers (f0 :| f1 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
+
+instance
+  (Functor m) =>
+  CallHandlers
+    '[ SCall t0 req0 resp0,
+       SCall t1 req1 resp1,
+       SCall t2 req2 resp2
+     ]
+    m
+  where
+  callHandlers (f0 :| f1 :| f2 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  callHandlers (f0 :| f1 :| f2 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
+  callHandlers (f0 :| f1 :| f2 :| HNil) (Sum 2 a) = Sum 2 <$> f2 (unsafeCoerce a :: Req t2 req2)
+
+instance
+  (Functor m) =>
+  CallHandlers
+    '[ SCall t0 req0 resp0,
+       SCall t1 req1 resp1,
+       SCall t2 req2 resp2,
+       SCall t3 req3 resp3
+     ]
+    m
+  where
+  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 0 a) = Sum 0 <$> f0 (unsafeCoerce a :: Req t0 req0)
+  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 1 a) = Sum 1 <$> f1 (unsafeCoerce a :: Req t1 req1)
+  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 2 a) = Sum 2 <$> f2 (unsafeCoerce a :: Req t2 req2)
+  callHandlers (f0 :| f1 :| f2 :| f3 :| HNil) (Sum 3 a) = Sum 3 <$> f3 (unsafeCoerce a :: Req t3 req3)
 
 -------------------------------------
 type family K a where
@@ -88,12 +119,27 @@ data A where
 data B where
   B :: Call Bool String -> B
 
-type Api = [K 'A, K 'B]
+data C where
+  C :: Call R Int -> C
 
-handler :: MonadIO m => HList (TMAP Api m)
+data D a where
+  D :: Call a Int -> D a
+
+data R = R
+  { r1 :: Int,
+    r2 :: Bool,
+    r3 :: String
+  }
+  deriving (Show)
+
+type Api a = [K 'A, K 'B, K 'C, K ('D @a)]
+
+handler :: (Has (State Int) sig m, Show a) => HList (TMAP (Api a) m)
 handler =
-  (\(Req i) -> liftIO (print i) >> pure (Resp (i == 1)))
-    :| (\(Req i) -> liftIO (print i) >> pure (Resp $ "respon: " ++ show i))
+  (\(Req i) -> modify (+ i) >> pure (Resp (i == 1)))
+    :| (\(Req i) -> pure (Resp $ "respon: " ++ show i))
+    :| (\(Req i) -> modify (+ r1 i) >> (Resp <$> get))
+    :| (\(Req a) -> pure (Resp 1))
     :| HNil
 
 call ::
@@ -114,18 +160,30 @@ call chan mvar _ req = do
     Just (Resp r) -> pure r
 
 -------------------------------------
--- >>> val
--- "respon: True"
+val :: IO ()
 val = do
-  chan <- newChan @(Sum (TReq Api), MVar (Sum (TResp Api)))
+  chan <- newChan @(Sum (TReq (Api Int)), MVar (Sum (TResp (Api Int))))
+
   forkIO $
     void $
-      forever $ do
-        (vc, mv) <- readChan chan
-        res <- callHandler @Api handler vc
-        putMVar mv res
-  mvar <- newEmptyMVar @(Sum (TResp Api))
-  forM [1 .. 10] $ \_ -> do
-    call chan mvar A 1
-    call chan mvar B True
-    call chan mvar B False
+      runState @Int 0 $
+        forever $ do
+          (vc, mv) <- liftIO $ readChan chan
+          liftIO $ print $ "recv call " ++ show vc
+          res <- callHandlers @(Api Int) handler vc
+          liftIO $ threadDelay 1000000
+          liftIO $ putMVar mv res
+
+  mvar <- newEmptyMVar @(Sum (TResp (Api Int)))
+  n <- call chan mvar C (R 1 False "nice")
+  print n
+  call chan mvar A 1
+  n <- call chan mvar C (R 2 False "nice")
+  print n
+  call chan mvar B True
+  n <- call chan mvar C (R 3 False "nice")
+  print n
+  call chan mvar B False
+  call chan mvar D (1 :: Int)
+  n <- call chan mvar C (R 4 False "nice")
+  print n

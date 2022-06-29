@@ -70,4 +70,4 @@ class
 pure (mkApplyInstance <$> [1 .. 30])
 
 instance Apply Show r => Show (Sum r) where
-  show s@(Sum i v) = show i ++ apply @Show show s
+  show s@(Sum i v) = "Sum " ++ show i ++ " " ++ apply @Show show s
