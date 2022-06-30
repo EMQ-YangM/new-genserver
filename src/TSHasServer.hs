@@ -24,6 +24,7 @@ import Control.Concurrent
 import Control.Effect.Labelled (HasLabelled, Labelled, runLabelled, sendLabelled)
 import Control.Monad
 import Control.Monad.IO.Class
+import Control.Tracer
 import Data.IORef
 import Data.Kind
 import GHC.TypeLits
@@ -104,14 +105,30 @@ type SupportHandleCall (name :: Symbol) r sig m =
     HandleCall r m
   )
 
+data ServerTracer r
+  = ServerReqTracer (Sum (TReq r))
+  | ServerRespTracer (Sum (TResp r))
+
+instance
+  ( Apply Show (TReq r),
+    Apply Show (TResp r)
+  ) =>
+  Show (ServerTracer r)
+  where
+  show (ServerReqTracer req) = "ServerRecv " ++ show req
+  show (ServerRespTracer resp) = "ServerResp " ++ show resp
+
 serverHandleCall ::
   forall name r sig m.
   SupportHandleCall name r sig m =>
+  Tracer m (ServerTracer r) ->
   HList (TMAP r m) ->
   m ()
-serverHandleCall hl = do
+serverHandleCall serverTracer hl = do
   va <- sendLabelled @name ServerGet
+  traceWith serverTracer $ ServerReqTracer va
   ha <- handleCall @r hl va
+  traceWith serverTracer $ ServerRespTracer ha
   sendLabelled @name (ServerPut ha)
 
 newtype ServerCallC r m a = ServerCallC
@@ -176,23 +193,29 @@ data F where
 type Api a = [K 'A, K 'B, K 'C, K ('D @a), K 'E]
 
 ------------------------------------------------------------------
+data RespTrace
+  = DResp Int
+  | AResp Bool
+  | BResp String
+  deriving (Show)
+
 client ::
   forall a sig m.
   ( SupportCall "a1" (Api a) sig m,
-    Has (Reader a) sig m,
-    MonadIO m
+    Has (Reader a) sig m
   ) =>
+  Tracer m RespTrace ->
   m ()
-client = forever $ do
+client tracer = forever $ do
   val <- ask @a
   g <- call @"a1" D val
-  liftIO $ print g
+  traceWith tracer $ DResp g
 
   g <- call @"a1" A 1
-  liftIO $ print g
+  traceWith tracer $ AResp g
 
   g <- call @"a1" B True
-  liftIO $ print g
+  traceWith tracer $ BResp g
 
 ------------------------------------------------------------------
 server ::
@@ -201,13 +224,15 @@ server ::
     Show a,
     MonadIO m
   ) =>
+  Tracer m (ServerTracer (Api a)) ->
   m ()
-server = forever $ do
-  serverHandleCall @"a1" $
+server serverTracer = forever $ do
+  liftIO $ threadDelay 1000000
+  serverHandleCall @"a1" serverTracer $
     (\(Req i) -> do pure (Resp True))
       :| (\(Req i) -> pure (Resp "nice"))
       :| (\(Req i) -> pure (Resp i))
-      :| (\(Req i) -> liftIO (print i) >> pure (Resp 1))
+      :| (\(Req i) -> pure (Resp 1))
       :| (\(Req i) -> pure (Resp True))
       :| HNil
 
@@ -216,5 +241,5 @@ server = forever $ do
 r :: IO ()
 r = do
   chan <- newChan
-  forkIO $ void $ runSupportHandleCall @"a1" chan (server @Int)
-  void $ runSupportCall @"a1" chan $ runReader @Int 1 (client @Int)
+  forkIO $ void $ runSupportHandleCall @"a1" chan (server @Int (contramap show stdoutTracer))
+  void $ runSupportCall @"a1" chan $ runReader @Int 1 (client @Int (contramap show stdoutTracer))
