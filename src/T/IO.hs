@@ -14,7 +14,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module TSHasServer where
+module T.IO where
 
 import Control.Algebra
 import Control.Carrier.Random.Gen
@@ -30,31 +30,8 @@ import Data.Kind
 import GHC.TypeLits
 import Sum1
 import System.Random (mkStdGen)
+import T.HasServer
 import TS1
-
-------------------------------------------------------------------
-data ClientCall (r :: [Type]) (m :: Type -> Type) (a :: Type) where
-  ClientCall ::
-    ( Req t req :< TReq r,
-      Resp t resp :< TResp r
-    ) =>
-    (Call req resp -> t) ->
-    req ->
-    ClientCall r m resp
-
-type SupportCall (name :: Symbol) r sig m =
-  HasLabelled name (ClientCall r) sig m
-
-call ::
-  forall (name :: Symbol) r t req resp sig m.
-  ( Req t req :< TReq r,
-    Resp t resp :< TResp r,
-    HasLabelled name (ClientCall r) sig m
-  ) =>
-  (Call req resp -> t) ->
-  req ->
-  m resp
-call t req = sendLabelled @name (ClientCall t req)
 
 ------------------------------------------------------------------
 newtype ClientCallC r m a = ClientCallC
@@ -96,40 +73,6 @@ runSupportCall chan f = do
   runReader (chan, mvar) . unClientCallC @r $ runLabelled f
 
 ------------------------------------------------------------------
-data ServerCall (r :: [Type]) (m :: Type -> Type) a where
-  ServerGet :: ServerCall r m (Sum (TReq r))
-  ServerPut :: Sum (TResp r) -> ServerCall r m ()
-
-type SupportHandleCall (name :: Symbol) r sig m =
-  ( HasLabelled name (ServerCall r) sig m,
-    HandleCall r m
-  )
-
-data ServerTracer r
-  = ServerReqTracer (Sum (TReq r))
-  | ServerRespTracer (Sum (TResp r))
-
-instance
-  ( Apply Show (TReq r),
-    Apply Show (TResp r)
-  ) =>
-  Show (ServerTracer r)
-  where
-  show (ServerReqTracer req) = "ServerRecv " ++ show req
-  show (ServerRespTracer resp) = "ServerResp " ++ show resp
-
-serverHandleCall ::
-  forall name r sig m.
-  SupportHandleCall name r sig m =>
-  Tracer m (ServerTracer r) ->
-  HList (TMAP r m) ->
-  m ()
-serverHandleCall serverTracer hl = do
-  va <- sendLabelled @name ServerGet
-  traceWith serverTracer $ ServerReqTracer va
-  ha <- handleCall @r hl va
-  traceWith serverTracer $ ServerRespTracer ha
-  sendLabelled @name (ServerPut ha)
 
 newtype ServerCallC r m a = ServerCallC
   { unServerCallC ::
@@ -206,7 +149,7 @@ client ::
   ) =>
   Tracer m RespTrace ->
   m ()
-client tracer = forever $ do
+client tracer = replicateM_ 10 $ do
   val <- ask @a
   g <- call @"a1" D val
   traceWith tracer $ DResp g
@@ -221,13 +164,11 @@ client tracer = forever $ do
 server ::
   forall a sig m.
   ( SupportHandleCall "a1" (Api a) sig m,
-    Show a,
-    MonadIO m
+    Show a
   ) =>
   Tracer m (ServerTracer (Api a)) ->
   m ()
 server serverTracer = forever $ do
-  liftIO $ threadDelay 1000000
   serverHandleCall @"a1" serverTracer $
     (\(Req i) -> do pure (Resp True))
       :| (\(Req i) -> pure (Resp "nice"))

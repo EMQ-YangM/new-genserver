@@ -7,7 +7,7 @@ import System.Environment
 import qualified T
 import qualified T1
 import qualified T2
-import TSHasServer
+import T.IO
 main :: IO ()
 main = r
   -- args <- getArgs

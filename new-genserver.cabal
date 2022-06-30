@@ -35,7 +35,9 @@ library
                    , T
                    , TS
                    , TS1
-                   , TSHasServer
+                   , T.HasServer
+                   , T.IO
+                   , T.IOSim
                    , T1
                    , T2
 
